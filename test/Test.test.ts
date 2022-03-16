@@ -1,7 +1,8 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { BigNumber } from "@0x/utils"
-import { AddressZero } from "@ethersproject/constants"
+import { AddressZero, MaxUint256 } from "@ethersproject/constants"
+
 import { SignatureType } from "../contracts/0x/utils/signature_utils";
 import { ERC721Order, NFTOrder, TradeDirection } from "../contracts/0x/utils/nft_orders";
 
@@ -21,9 +22,9 @@ describe("Test buy and sell orders", function () {
         this.SushiToken = await ethers.getContractFactory("SushiToken")
         this.UniswapV2Factory = await ethers.getContractFactory("UniswapV2Factory")
         this.UniswapV2Pair = await ethers.getContractFactory("UniswapV2Pair")
+        this.UniswapV2Router = await ethers.getContractFactory("UniswapV2Router02")
 
         /* 0x contract factories */
-
         this.ZeroExBootstrap = await ethers.getContractFactory("BootstrapFeature")
         this.ZeroExFullMigration = await ethers.getContractFactory("FullMigration")
         this.ZeroExInitialMigration = await ethers.getContractFactory("InitialMigration")
@@ -44,6 +45,9 @@ describe("Test buy and sell orders", function () {
         /* mock token deployments */
         this.weth = await this.ERC20Mock.deploy("WETH", "WETH", "100000000")
         await this.weth.deployed()
+
+        this.sushi = await this.ERC20Mock.deploy("SUSHI", "SUSHI", "100000000")
+        await this.sushi.deployed()
     
         this.erc20 = await this.ERC20Mock.deploy("TOKEN", "TOKEN", "100000000")
         await this.erc20.deployed()
@@ -54,13 +58,30 @@ describe("Test buy and sell orders", function () {
         /* sushi deployments */
         this.sushiSwapFactory = await this.UniswapV2Factory.deploy(this.minter.address)
         await this.sushiSwapFactory.deployed()
-    
-        this.sushiToken = await this.SushiToken.deploy()
-        await this.sushiToken.deployed()
-    
-        const pair = await this.sushiSwapFactory.createPair(this.weth.address, this.erc20.address)
+
+        this.sushiSwapRouter = await this.UniswapV2Router.deploy(this.sushiSwapFactory.address, this.weth.address)
+        await this.sushiSwapRouter.deployed()
+
+        /* seed sushi pool */
+        const pair = await this.sushiSwapFactory.createPair(this.weth.address, this.sushi.address)
     
         this.lp = await this.UniswapV2Pair.attach((await pair.wait()).events[0].args.pair)
+
+        await this.weth.transfer(this.minter.address, "50000")
+        await this.sushi.transfer(this.minter.address, "100000")
+        await this.weth.connect(this.minter).approve(this.sushiSwapRouter.address, MaxUint256)
+        await this.sushi.connect(this.minter).approve(this.sushiSwapRouter.address, MaxUint256)
+
+        await this.sushiSwapRouter.connect(this.minter).addLiquidity(
+            this.weth.address,
+            this.sushi.address,
+            ethers.BigNumber.from('50000'),
+            ethers.BigNumber.from('100000'),
+            0,
+            0,
+            this.minter.address,
+            MaxUint256,
+        )
 
         /* 0x deployments */
         const fullMigration = await this.ZeroExFullMigration.deploy(this.minter.address)
@@ -113,6 +134,7 @@ describe("Test buy and sell orders", function () {
             },
         )
 
+        /* 0x nft features */
         this.erc721Orders = await this.ZeroExERC721Orders.deploy(this.zeroEx.address, this.weth.address)
         await this.erc721Orders.deployed()
 
@@ -183,6 +205,5 @@ describe("Test buy and sell orders", function () {
         expect(aliceERC721Balance, "1")
         expect(bobWETHBalance, buyOrder.erc20TokenAmount.toString())
         expect(bobERC721Balance, "0")
-
     });
 });
