@@ -117,13 +117,16 @@ const config: HardhatUserConfig = {
     ),
   },
   solidity: {
-    version: "0.8.11",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 999999,
-      },
-    },
+    compilers: [
+      {
+        version: "0.6.12",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 999999,
+        },
+      }
+    }]
   },
   tenderly: {
     project: String(process.env.TENDERLY_PROJECT),
