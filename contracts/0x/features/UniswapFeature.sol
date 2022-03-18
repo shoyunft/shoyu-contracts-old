@@ -42,13 +42,23 @@ contract UniswapFeature is
     IEtherTokenV06 private immutable WETH;
 
     // 0xFF + address of the UniswapV2Factory contract.
-    uint256 constant private FF_UNISWAP_FACTORY = 0xFF5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f0000000000000000000000;
+    uint256 private FF_UNISWAP_FACTORY;
     // 0xFF + address of the (Sushiswap) UniswapV2Factory contract.
-    uint256 constant private FF_SUSHISWAP_FACTORY = 0xFFC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac0000000000000000000000;
+    uint256 private FF_SUSHISWAP_FACTORY;
     // Init code hash of the UniswapV2Pair contract.
-    uint256 constant private UNISWAP_PAIR_INIT_CODE_HASH = 0x96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f;
+    uint256 private UNISWAP_PAIR_INIT_CODE_HASH;
     // Init code hash of the (Sushiswap) UniswapV2Pair contract.
-    uint256 constant private SUSHISWAP_PAIR_INIT_CODE_HASH = 0xe18a34eb0e04b04f7a0ac29a6e80748dca96319b42c54d679cb821dca90c6303;
+    uint256 private SUSHISWAP_PAIR_INIT_CODE_HASH;
+
+    // 0xFF + address of the UniswapV2Factory contract.
+    //uint256 private immutable FF_UNISWAP_FACTORY = 0xFF5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f0000000000000000000000;
+    // 0xFF + address of the (Sushiswap) UniswapV2Factory contract.
+    //uint256 private immutable FF_SUSHISWAP_FACTORY = 0xFFC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac0000000000000000000000;
+    // Init code hash of the UniswapV2Pair contract.
+    //uint256 private immutable UNISWAP_PAIR_INIT_CODE_HASH = 0x96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f;
+    // Init code hash of the (Sushiswap) UniswapV2Pair contract.
+    //uint256 private immutable SUSHISWAP_PAIR_INIT_CODE_HASH = 0xe18a34eb0e04b04f7a0ac29a6e80748dca96319b42c54d679cb821dca90c6303;
+
     // Mask of the lower 20 bytes of a bytes32.
     uint256 constant private ADDRESS_MASK = 0x000000000000000000000000ffffffffffffffffffffffffffffffffffffffff;
     // ETH pseudo-token address.
@@ -75,8 +85,18 @@ contract UniswapFeature is
 
     /// @dev Construct this contract.
     /// @param weth The WETH contract.
-    constructor(IEtherTokenV06 weth) public {
+    constructor(
+        IEtherTokenV06 weth,
+        address uniswap_factory,
+        address sushiswap_factory,
+        uint256 uniswap_pair_init_code_hash,
+        uint256 sushiswap_pair_init_code_hash
+    ) public {
         WETH = weth;
+        FF_UNISWAP_FACTORY = (uint256(0xff) << 248) | (uint256(uniswap_factory) << 88);
+        FF_SUSHISWAP_FACTORY = (uint256(0xff) << 248) | (uint256(sushiswap_factory) << 88);
+        UNISWAP_PAIR_INIT_CODE_HASH = uniswap_pair_init_code_hash;
+        SUSHISWAP_PAIR_INIT_CODE_HASH = sushiswap_pair_init_code_hash;
     }
 
     /// @dev Initialize and register this feature.
@@ -334,14 +354,14 @@ contract UniswapFeature is
                 // Compute the pair address by hashing all the components together.
                 switch mload(0xA20) // isSushi
                     case 0 {
-                        mstore(0xB00, FF_UNISWAP_FACTORY)
+                        mstore(0xB00, FF_UNISWAP_FACTORY_slot)
                         mstore(0xB15, salt)
-                        mstore(0xB35, UNISWAP_PAIR_INIT_CODE_HASH)
+                        mstore(0xB35, UNISWAP_PAIR_INIT_CODE_HASH_slot)
                     }
                     default {
-                        mstore(0xB00, FF_SUSHISWAP_FACTORY)
+                        mstore(0xB00, FF_SUSHISWAP_FACTORY_slot)
                         mstore(0xB15, salt)
-                        mstore(0xB35, SUSHISWAP_PAIR_INIT_CODE_HASH)
+                        mstore(0xB35, SUSHISWAP_PAIR_INIT_CODE_HASH_slot)
                     }
                 pair := and(ADDRESS_MASK, keccak256(0xB00, 0x55))
             }

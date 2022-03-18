@@ -37,7 +37,7 @@ import "./features/interfaces/IFundRecoveryFeature.sol";
 import "./features/interfaces/IERC721OrdersFeature.sol";
 import "./features/interfaces/IERC1155OrdersFeature.sol";
 import "./features/interfaces/IERC165Feature.sol";
-
+import "./features/shoyu/IShoyuERC721OrdersFeature.sol";
 
 /// @dev Interface for a fully featured Exchange Proxy.
 interface IZeroEx is
@@ -56,7 +56,8 @@ interface IZeroEx is
     IFundRecoveryFeature,
     IERC721OrdersFeature,
     IERC1155OrdersFeature,
-    IERC165Feature
+    IERC165Feature,
+    IShoyuERC721OrdersFeature
 {
     // solhint-disable state-visibility
 
