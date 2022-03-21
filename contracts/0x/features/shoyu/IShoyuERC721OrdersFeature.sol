@@ -40,13 +40,13 @@ interface IShoyuERC721OrdersFeature {
     ///        but before transferring the ERC20 tokens to the seller.
     ///        Native tokens acquired during the callback can be used
     ///        to fill the order.
-    // function buyAndSwapERC721(
-    //     LibNFTOrder.ERC721Order calldata sellOrder,
-    //     LibSignature.Signature calldata signature,
-    //     bytes calldata callbackData,
-    //     IERC20TokenV06 outputToken,
-    //     uint256 maxAmountIn
-    // ) external payable;
+    function buyAndSwapERC721(
+        LibNFTOrder.ERC721Order calldata sellOrder,
+        LibSignature.Signature calldata signature,
+        bytes calldata callbackData,
+        IERC20TokenV06 inputToken,
+        uint256 maxAmountIn
+    ) external payable;
 
     /// @dev Emitted whenever an `ERC721Order` is filled.
     /// @param direction Whether the order is selling or

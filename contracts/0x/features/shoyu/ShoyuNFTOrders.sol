@@ -61,6 +61,14 @@ abstract contract ShoyuNFTOrders is
         uint256 minAmountOut;
     }
 
+    struct BuyAndSwapParams {
+        uint128 buyAmount;
+        uint256 ethAvailable;
+        bytes takerCallbackData;
+        IERC20TokenV06 inputToken;
+        uint256 maxAmountIn;
+    }
+
     function _sellAndSwapNFT(
         LibNFTOrder.NFTOrder memory buyOrder,
         LibSignature.Signature memory signature,
@@ -135,7 +143,7 @@ abstract contract ShoyuNFTOrders is
                 params.minAmountOut,
                 path,
                 params.taker,
-                0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+                buyOrder.expiry
             );
         } else {
             SushiswapRouter.swapExactTokensForTokens(
@@ -143,7 +151,7 @@ abstract contract ShoyuNFTOrders is
                 0,
                 path,
                 params.taker,
-                0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+                buyOrder.expiry
             );
         }
 
@@ -179,13 +187,175 @@ abstract contract ShoyuNFTOrders is
         );
 
         // The buyer pays the order fees.
-        _payFees(
-            buyOrder,
-            buyOrder.maker,
-            params.sellAmount,
-            orderInfo.orderAmount,
-            false
+        // _payFees(
+        //     buyOrder,
+        //     buyOrder.maker,
+        //     params.sellAmount,
+        //     orderInfo.orderAmount,
+        //     false
+        // );
+    }
+
+    // Core settlement logic for buying an NFT asset.
+    function _buyAndSwapNFT(
+        LibNFTOrder.NFTOrder memory sellOrder,
+        LibSignature.Signature memory signature,
+        BuyAndSwapParams memory params
+    ) internal returns (uint256 erc20FillAmount) {
+        LibNFTOrder.OrderInfo memory orderInfo = _getOrderInfo(sellOrder);
+        // Check that the order can be filled.
+        _validateSellOrder(sellOrder, signature, orderInfo, msg.sender);
+
+        if (params.buyAmount > orderInfo.remainingAmount) {
+            LibNFTOrdersRichErrors
+                .ExceedsRemainingOrderAmount(
+                    orderInfo.remainingAmount,
+                    params.buyAmount
+                )
+                .rrevert();
+        }
+
+        _updateOrderState(sellOrder, orderInfo.orderHash, params.buyAmount);
+
+        if (params.buyAmount == orderInfo.orderAmount) {
+            erc20FillAmount = sellOrder.erc20TokenAmount;
+        } else {
+            // Rounding favors the order maker.
+            erc20FillAmount = LibMathV06.getPartialAmountCeil(
+                params.buyAmount,
+                orderInfo.orderAmount,
+                sellOrder.erc20TokenAmount
+            );
+        }
+
+        // Transfer the NFT asset to the buyer (`msg.sender`).
+        _transferNFTAssetFrom(
+            sellOrder.nft,
+            sellOrder.maker,
+            msg.sender,
+            sellOrder.nftId,
+            params.buyAmount
         );
+
+        uint256 ethAvailable = params.ethAvailable;
+        if (params.takerCallbackData.length > 0) {
+            require(
+                msg.sender != address(this),
+                "ShoyuNFTOrders::_buyNFT/CANNOT_CALLBACK_SELF"
+            );
+            uint256 ethBalanceBeforeCallback = address(this).balance;
+            // Invoke the callback
+            bytes4 callbackResult = ITakerCallback(msg.sender)
+                .zeroExTakerCallback(
+                    orderInfo.orderHash,
+                    params.takerCallbackData
+                );
+            // Update `ethAvailable` with amount acquired during
+            // the callback
+            ethAvailable = ethAvailable.safeAdd(
+                address(this).balance.safeSub(ethBalanceBeforeCallback)
+            );
+            // Check for the magic success bytes
+            require(
+                callbackResult == TAKER_CALLBACK_MAGIC_BYTES,
+                "ShoyuNFTOrders::_buyNFT/CALLBACK_FAILED"
+            );
+        }
+
+        address[] memory path = new address[](2);
+
+        if (address(params.inputToken) == NATIVE_TOKEN_ADDRESS) {
+            path[0] = address(WETH);
+            path[1] = address(sellOrder.erc20Token);
+
+            SushiswapRouter.swapETHForExactTokens{value: ethAvailable}(
+                erc20FillAmount,
+                path,
+                sellOrder.maker,
+                sellOrder.expiry
+            );
+
+            // Fees are paid from the EP's current balance of ETH.
+            // _payEthFees(
+            //     sellOrder,
+            //     params.buyAmount,
+            //     orderInfo.orderAmount,
+            //     erc20FillAmount,
+            //     ethAvailable
+            // );
+        } else {
+            uint256 erc20BalanceBefore = params.inputToken.balanceOf(
+                address(this)
+            );
+
+            // Transfer the ERC20 from the maker to the Exchange Proxy
+            // so we can swap it before sending it to the seller.
+            // TODO: Probably safe to just use ERC20.transferFrom for some
+            //       small gas savings
+            _transferERC20TokensFrom(
+                params.inputToken,
+                msg.sender,
+                address(this),
+                params.maxAmountIn
+            );
+
+            params.inputToken.approve(
+                address(SushiswapRouter),
+                params.maxAmountIn
+            );
+
+            if (address(sellOrder.erc20Token) == NATIVE_TOKEN_ADDRESS) {
+                path[0] = address(params.inputToken);
+                path[1] = address(WETH);
+                SushiswapRouter.swapTokensForExactETH(
+                    erc20FillAmount,
+                    params.maxAmountIn,
+                    path,
+                    sellOrder.maker,
+                    sellOrder.expiry
+                );
+            } else {
+                path[0] = address(params.inputToken);
+                path[1] = address(sellOrder.erc20Token);
+                SushiswapRouter.swapTokensForExactTokens(
+                    erc20FillAmount,
+                    params.maxAmountIn,
+                    path,
+                    sellOrder.maker,
+                    sellOrder.expiry
+                );
+            }
+
+            // The buyer pays fees using WETH.
+            // _payFees(
+            //     sellOrder,
+            //     msg.sender,
+            //     params.buyAmount,
+            //     orderInfo.orderAmount,
+            //     false
+            // );
+
+            uint256 erc20BalanceAfter = params.inputToken.balanceOf(
+                address(this)
+            );
+
+            // Cannot use pre-existing ERC20 balance
+            if (erc20BalanceAfter < erc20BalanceBefore) {
+                LibNFTOrdersRichErrors
+                    .OverspentEthError(
+                        params.maxAmountIn +
+                            (erc20BalanceBefore - erc20BalanceAfter),
+                        params.maxAmountIn
+                    )
+                    .rrevert();
+            }
+
+            // Return dust
+            params.inputToken.transfer(
+                msg.sender,
+                erc20BalanceAfter - erc20BalanceBefore
+            );
+        }
     }
 
     function _validateSellOrder(

@@ -34,4 +34,17 @@ library LibShoyuNFTOrdersRichErrors {
                 token1
             );
     }
+
+    function OverspentTokenError(uint256 tokenSpent, uint256 tokenAvailable)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return
+            abi.encodeWithSelector(
+                bytes4(keccak256("OverspentTokenError(uint256,uint256)")),
+                tokenSpent,
+                tokenAvailable
+            );
+    }
 }

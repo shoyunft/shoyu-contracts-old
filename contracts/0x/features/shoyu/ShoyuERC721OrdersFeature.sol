@@ -40,6 +40,7 @@ contract ShoyuERC721OrdersFeature is
     /// @return success `LibMigrate.SUCCESS` on success.
     function migrate() external returns (bytes4 success) {
         _registerFeatureFunction(this.sellAndSwapERC721.selector);
+        _registerFeatureFunction(this.buyAndSwapERC721.selector);
         return LibMigrate.MIGRATE_SUCCESS;
     }
 
@@ -81,6 +82,45 @@ contract ShoyuERC721OrdersFeature is
         );
     }
 
+    /// @dev Buys an ERC721 asset by filling the given order.
+    /// @param sellOrder The ERC721 sell order.
+    /// @param signature The order signature.
+    /// @param callbackData If this parameter is non-zero, invokes
+    ///        `zeroExERC721OrderCallback` on `msg.sender` after
+    ///        the ERC721 asset has been transferred to `msg.sender`
+    ///        but before transferring the ERC20 tokens to the seller.
+    ///        Native tokens acquired during the callback can be used
+    ///        to fill the order.
+    function buyAndSwapERC721(
+        LibNFTOrder.ERC721Order memory sellOrder,
+        LibSignature.Signature memory signature,
+        bytes memory callbackData,
+        IERC20TokenV06 inputToken,
+        uint256 maxAmountIn
+    ) public payable override {
+        uint256 ethBalanceBefore = address(this).balance.safeSub(msg.value);
+        _buyAndSwapERC721(
+            sellOrder,
+            signature,
+            msg.value,
+            callbackData,
+            inputToken,
+            maxAmountIn
+        );
+        uint256 ethBalanceAfter = address(this).balance;
+        // Cannot use pre-existing ETH balance
+        if (ethBalanceAfter < ethBalanceBefore) {
+            LibNFTOrdersRichErrors
+                .OverspentEthError(
+                    msg.value + (ethBalanceBefore - ethBalanceAfter),
+                    msg.value
+                )
+                .rrevert();
+        }
+        // Refund
+        _transferEth(msg.sender, ethBalanceAfter - ethBalanceBefore);
+    }
+
     // Core settlement logic for selling an ERC721 asset.
     // Used by `sellERC721` and `onERC721Received`.
     function _sellAndSwapERC721(
@@ -118,6 +158,40 @@ contract ShoyuERC721OrdersFeature is
             buyOrder.erc20TokenAmount,
             buyOrder.erc721Token,
             erc721TokenId,
+            address(0)
+        );
+    }
+
+    // Core settlement logic for buying an ERC721 asset.
+    function _buyAndSwapERC721(
+        LibNFTOrder.ERC721Order memory sellOrder,
+        LibSignature.Signature memory signature,
+        uint256 ethAvailable,
+        bytes memory takerCallbackData,
+        IERC20TokenV06 inputToken,
+        uint256 maxAmountIn
+    ) public payable {
+        _buyAndSwapNFT(
+            sellOrder.asNFTOrder(),
+            signature,
+            BuyAndSwapParams(
+                1, // buy amount
+                ethAvailable,
+                takerCallbackData,
+                inputToken,
+                maxAmountIn
+            )
+        );
+
+        emit ERC721OrderFilled(
+            sellOrder.direction,
+            sellOrder.maker,
+            msg.sender,
+            sellOrder.nonce,
+            sellOrder.erc20Token,
+            sellOrder.erc20TokenAmount,
+            sellOrder.erc721Token,
+            sellOrder.erc721TokenId,
             address(0)
         );
     }

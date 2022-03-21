@@ -16,6 +16,7 @@ describe("Test buy and sell orders", function () {
 
         /* mock contract factories */
         this.ERC20Mock = await ethers.getContractFactory("ERC20Mock", this.minter)
+        this.WETH9Mock = await ethers.getContractFactory("WETH9Mock", this.minter)
         this.ERC721Mock = await ethers.getContractFactory("TestMintableERC721Token")
         
         /* sushi contract factories */
@@ -43,13 +44,11 @@ describe("Test buy and sell orders", function () {
         /* shoyu contract factories */
         this.ShoyuERC721Orders = await ethers.getContractFactory("ShoyuERC721OrdersFeature")
         // this.ShoyuERC1155Orders = await ethers.getContractFactory("ShoyuERC1155OrdersFeature")
-
-
     })
 
     beforeEach(async function () {
         /* mock token deployments */
-        this.weth = await this.ERC20Mock.deploy("WETH", "WETH", "100000000")
+        this.weth = await this.WETH9Mock.deploy()
         await this.weth.deployed()
 
         this.sushi = await this.ERC20Mock.deploy("SUSHI", "SUSHI", "100000000")
@@ -73,7 +72,7 @@ describe("Test buy and sell orders", function () {
     
         this.lp = await this.UniswapV2Pair.attach((await pair.wait()).events[0].args.pair)
 
-        await this.weth.transfer(this.minter.address, "50000")
+        await this.weth.connect(this.minter).deposit({ value: "50000" })
         await this.sushi.transfer(this.minter.address, "100000")
         await this.weth.connect(this.minter).approve(this.sushiswapRouter.address, MaxUint256)
         await this.sushi.connect(this.minter).approve(this.sushiswapRouter.address, MaxUint256)
@@ -166,7 +165,7 @@ describe("Test buy and sell orders", function () {
     })
 
     it("NFT owner can fill offer (sell order)", async function() {
-        await this.weth.transfer(this.alice.address, "50000")
+        await this.weth.connect(this.alice).deposit({ value: "50000" })
         await this.erc721.mint(this.bob.address, "420")
 
         /* alice creates a buy order for bob's nft */
@@ -224,7 +223,7 @@ describe("Test buy and sell orders", function () {
     });
 
     it("NFT owner can fill offer with swap (sell order)", async function() {
-        await this.weth.transfer(this.alice.address, "50000")
+        await this.weth.connect(this.alice).deposit({ value: "50000" })
         await this.erc721.mint(this.bob.address, "420")
 
         /* alice creates a buy order for bob's nft with weth */
@@ -283,5 +282,246 @@ describe("Test buy and sell orders", function () {
         expect(Number(bobWETHBalance.toString())).to.be.lessThan(50000)
         expect(Number(bobSUSHIBalance.toString())).to.be.greaterThan(0)
         expect(bobERC721Balance.toString()).to.be.eq("0")
+    });
+
+    it("NFT owner can list an item for sale (sell order) & buyer can fill order", async function() {
+        await this.erc721.mint(this.alice.address, "420")
+        await this.weth.connect(this.bob).deposit({ value: "50000" })
+
+        /* alice creates sell order for nft */
+        await this.erc721.connect(this.alice).approve(this.zeroEx.address, "420")
+        const sellOrder = new ERC721Order({
+            chainId: 31337,
+            verifyingContract: this.zeroEx.address,
+            direction: TradeDirection.SellNFT,
+            erc20Token: this.weth.address,
+            erc20TokenAmount: new BigNumber(5000),
+            erc721Token: this.erc721.address,
+            erc721TokenId: new BigNumber(420),
+            maker: this.alice.address,
+            taker: AddressZero,
+            nonce: new BigNumber(69),
+            expiry: new BigNumber(Math.floor(Date.now() / 1000) + 3600)
+        })
+
+        const { domain, message } = sellOrder.getEIP712TypedData();
+        const types = {
+            [ERC721Order.STRUCT_NAME]: ERC721Order.STRUCT_ABI,
+            ['Fee']: NFTOrder.FEE_ABI,
+            ['Property']: NFTOrder.PROPERTY_ABI
+        }
+
+        const rawSignature = await this.alice._signTypedData(domain, types, message)
+        const { v, r, s } = ethers.utils.splitSignature(rawSignature);
+        const sellOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 }
+
+        /* bob fills sell order */
+        await this.weth.connect(this.bob).approve(this.zeroEx.address, "5000")
+        const tx = await this.zeroEx.connect(this.bob).buyERC721(
+            {
+                ...sellOrder,
+                expiry: ethers.BigNumber.from(sellOrder.expiry.toString()),
+                nonce: ethers.BigNumber.from(sellOrder.nonce.toString()),
+                erc20TokenAmount: ethers.BigNumber.from(sellOrder.erc20TokenAmount.toString()),
+                erc721TokenId: ethers.BigNumber.from(sellOrder.erc721TokenId.toString())
+            },                      // LibNFTOrder
+            sellOrderSignature,     // LibSignature
+            "0x",                   // callbackData
+        )
+
+        const aliceWETHBalance = await this.weth.balanceOf(this.alice.address)
+        const aliceERC721Balance = await this.erc721.balanceOf(this.alice.address)
+        const bobWETHBalance = await this.weth.balanceOf(this.bob.address)
+        const bobERC721Balance = await this.erc721.balanceOf(this.bob.address)
+
+        expect(aliceWETHBalance.toString()).to.eq(sellOrder.erc20TokenAmount.toString())
+        expect(aliceERC721Balance.toString()).to.eq("0")
+        expect(Number(bobWETHBalance.toString())).to.lessThan(50000)
+        expect(bobERC721Balance.toString()).to.eq("1")
+    });
+
+    it("NFT owner can list an item for sale (sell order) & buyer can swap token to fill order", async function() {
+        await this.erc721.mint(this.alice.address, "420")
+        await this.weth.connect(this.bob).deposit({ value: "50000" })
+
+        /* alice creates sell order for nft */
+        await this.erc721.connect(this.alice).approve(this.zeroEx.address, "420")
+        const sellOrder = new ERC721Order({
+            chainId: 31337,
+            verifyingContract: this.zeroEx.address,
+            direction: TradeDirection.SellNFT,
+            erc20Token: this.sushi.address,
+            erc20TokenAmount: new BigNumber(100),
+            erc721Token: this.erc721.address,
+            erc721TokenId: new BigNumber(420),
+            maker: this.alice.address,
+            taker: AddressZero,
+            nonce: new BigNumber(69),
+            expiry: new BigNumber(Math.floor(Date.now() / 1000) + 3600)
+        })
+
+        const { domain, message } = sellOrder.getEIP712TypedData();
+        const types = {
+            [ERC721Order.STRUCT_NAME]: ERC721Order.STRUCT_ABI,
+            ['Fee']: NFTOrder.FEE_ABI,
+            ['Property']: NFTOrder.PROPERTY_ABI
+        }
+
+        const rawSignature = await this.alice._signTypedData(domain, types, message)
+        const { v, r, s } = ethers.utils.splitSignature(rawSignature);
+        const sellOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 }
+
+        /* bob fills sell order and swaps WETH to SUSHI to fill order */
+        await this.weth.connect(this.bob).approve(this.zeroEx.address, "5000")
+        const tx = await this.zeroEx.connect(this.bob).buyAndSwapERC721(
+            {
+                ...sellOrder,
+                expiry: ethers.BigNumber.from(sellOrder.expiry.toString()),
+                nonce: ethers.BigNumber.from(sellOrder.nonce.toString()),
+                erc20TokenAmount: ethers.BigNumber.from(sellOrder.erc20TokenAmount.toString()),
+                erc721TokenId: ethers.BigNumber.from(sellOrder.erc721TokenId.toString())
+            },                      // LibNFTOrder
+            sellOrderSignature,     // LibSignature
+            "0x",                   // callbackData
+            this.weth.address,      // inputToken
+            "5000"                  // maxAmountIn
+        )
+
+        const aliceWETHBalance = await this.weth.balanceOf(this.alice.address)
+        const aliceERC721Balance = await this.erc721.balanceOf(this.alice.address)
+        const aliceSUSHIBalance = await this.sushi.balanceOf(this.alice.address)
+        const bobWETHBalance = await this.weth.balanceOf(this.bob.address)
+        const bobERC721Balance = await this.erc721.balanceOf(this.bob.address)
+
+        expect(aliceWETHBalance.toString()).to.eq("0")
+        expect(aliceERC721Balance.toString()).to.eq("0")
+        expect(aliceSUSHIBalance.toString()).to.eq(sellOrder.erc20TokenAmount.toString())
+        expect(Number(bobWETHBalance.toString())).to.lessThan(50000)
+        expect(bobERC721Balance.toString()).to.eq("1")
+    });
+
+    it("Buyer can swap and fill sell order by paying ETH", async function() {
+        await this.erc721.mint(this.alice.address, "420")
+
+        /* alice creates sell order for nft */
+        await this.erc721.connect(this.alice).approve(this.zeroEx.address, "420")
+        const sellOrder = new ERC721Order({
+            chainId: 31337,
+            verifyingContract: this.zeroEx.address,
+            direction: TradeDirection.SellNFT,
+            erc20Token: this.sushi.address,
+            erc20TokenAmount: new BigNumber(100),
+            erc721Token: this.erc721.address,
+            erc721TokenId: new BigNumber(420),
+            maker: this.alice.address,
+            taker: AddressZero,
+            nonce: new BigNumber(69),
+            expiry: new BigNumber(Math.floor(Date.now() / 1000) + 3600)
+        })
+
+        const { domain, message } = sellOrder.getEIP712TypedData();
+        const types = {
+            [ERC721Order.STRUCT_NAME]: ERC721Order.STRUCT_ABI,
+            ['Fee']: NFTOrder.FEE_ABI,
+            ['Property']: NFTOrder.PROPERTY_ABI
+        }
+
+        const rawSignature = await this.alice._signTypedData(domain, types, message)
+        const { v, r, s } = ethers.utils.splitSignature(rawSignature);
+        const sellOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 }
+
+        /* bob fills sell order and swaps WETH to SUSHI to fill order */
+        const tx = await this.zeroEx.connect(this.bob).buyAndSwapERC721(
+            {
+                ...sellOrder,
+                expiry: ethers.BigNumber.from(sellOrder.expiry.toString()),
+                nonce: ethers.BigNumber.from(sellOrder.nonce.toString()),
+                erc20TokenAmount: ethers.BigNumber.from(sellOrder.erc20TokenAmount.toString()),
+                erc721TokenId: ethers.BigNumber.from(sellOrder.erc721TokenId.toString())
+            },                      // LibNFTOrder
+            sellOrderSignature,     // LibSignature
+            "0x",                   // callbackData
+            "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", // inputToken
+            "500",                 // maxAmountIn
+            { value: "500" }    
+        )
+
+        const aliceWETHBalance = await this.weth.balanceOf(this.alice.address)
+        const aliceERC721Balance = await this.erc721.balanceOf(this.alice.address)
+        const aliceSUSHIBalance = await this.sushi.balanceOf(this.alice.address)
+        const bobWETHBalance = await this.weth.balanceOf(this.bob.address)
+        const bobERC721Balance = await this.erc721.balanceOf(this.bob.address)
+
+        expect(aliceWETHBalance.toString()).to.eq("0")
+        expect(aliceERC721Balance.toString()).to.eq("0")
+        expect(aliceSUSHIBalance.toString()).to.eq(sellOrder.erc20TokenAmount.toString())
+        expect(Number(bobWETHBalance.toString())).to.lessThan(50000)
+        expect(bobERC721Balance.toString()).to.eq("1")
+    });
+
+    it("Buyer can swap and fill sell order, with seller receiving ETH", async function() {
+        await this.erc721.mint(this.alice.address, "420")
+        await this.sushi.transfer(this.bob.address, "10000")
+
+        const aliceETHBalanceBefore = await this.alice.getBalance();
+
+        /* alice creates sell order for nft */
+        this.erc721.connect(this.alice).approve(this.zeroEx.address, "420")
+        const sellOrder = new ERC721Order({
+            chainId: 31337,
+            verifyingContract: this.zeroEx.address,
+            direction: TradeDirection.SellNFT,
+            erc20Token: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            erc20TokenAmount: new BigNumber(100),
+            erc721Token: this.erc721.address,
+            erc721TokenId: new BigNumber(420),
+            maker: this.alice.address,
+            taker: AddressZero,
+            nonce: new BigNumber(69),
+            expiry: new BigNumber(Math.floor(Date.now() / 1000) + 3600)
+        })
+
+        const { domain, message } = sellOrder.getEIP712TypedData();
+        const types = {
+            [ERC721Order.STRUCT_NAME]: ERC721Order.STRUCT_ABI,
+            ['Fee']: NFTOrder.FEE_ABI,
+            ['Property']: NFTOrder.PROPERTY_ABI
+        }
+
+        const rawSignature = await this.alice._signTypedData(domain, types, message)
+        const { v, r, s } = ethers.utils.splitSignature(rawSignature);
+        const sellOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 }
+
+        /* bob fills sell order and swaps WETH to SUSHI to fill order */
+        await this.sushi.connect(this.bob).approve(this.zeroEx.address, "5000")
+        const tx = await this.zeroEx.connect(this.bob).buyAndSwapERC721(
+            {
+                ...sellOrder,
+                expiry: ethers.BigNumber.from(sellOrder.expiry.toString()),
+                nonce: ethers.BigNumber.from(sellOrder.nonce.toString()),
+                erc20TokenAmount: ethers.BigNumber.from(sellOrder.erc20TokenAmount.toString()),
+                erc721TokenId: ethers.BigNumber.from(sellOrder.erc721TokenId.toString())
+            },                      // LibNFTOrder
+            sellOrderSignature,     // LibSignature
+            "0x",                   // callbackData
+            this.sushi.address,     // inputToken
+            "5000"                 // maxAmountIn
+        )
+
+        const aliceETHBalanceAfter = await this.alice.getBalance();
+        const aliceWETHBalance = await this.weth.balanceOf(this.alice.address)
+        const aliceERC721Balance = await this.erc721.balanceOf(this.alice.address)
+        const aliceSUSHIBalance = await this.sushi.balanceOf(this.alice.address)
+        const bobWETHBalance = await this.weth.balanceOf(this.bob.address)
+        const bobERC721Balance = await this.erc721.balanceOf(this.bob.address)
+
+        expect(aliceWETHBalance.toString()).to.eq("0")
+        expect(aliceERC721Balance.toString()).to.eq("0")
+        expect(aliceSUSHIBalance.toString()).to.eq("0")
+        expect(aliceETHBalanceBefore.toString()).to.not.be.eq(sellOrder.erc20TokenAmount.toString())
+        expect(Number(bobWETHBalance.toString())).to.lessThan(50000)
+        expect(bobERC721Balance.toString()).to.eq("1")
+
+        // todo - chai use ethers big number
     });
 });
