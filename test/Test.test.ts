@@ -196,7 +196,7 @@ describe("Test buy and sell orders", function () {
         const { v, r, s } = ethers.utils.splitSignature(rawSignature);
         const buyOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 }
 
-        /* bob fills sell order */
+        /* bob fills buy order */
         await this.erc721.connect(this.bob).approve(this.zeroEx.address, "420")
         const tx = await this.zeroEx.connect(this.bob).sellERC721(
             {
@@ -217,10 +217,10 @@ describe("Test buy and sell orders", function () {
         const bobWETHBalance = await this.weth.balanceOf(this.bob.address)
         const bobERC721Balance = await this.erc721.balanceOf(this.bob.address)
 
-        expect(aliceWETHBalance, "0")
-        expect(aliceERC721Balance, "1")
-        expect(bobWETHBalance, buyOrder.erc20TokenAmount.toString())
-        expect(bobERC721Balance, "0")
+        expect(aliceWETHBalance.toString()).to.be.eq("45000")
+        expect(aliceERC721Balance.toString()).to.eq("1")
+        expect(bobWETHBalance.toString()).to.eq("5000")
+        expect(bobERC721Balance.toString()).to.eq("0")
     });
 
     it("NFT owner can fill offer with swap (sell order)", async function() {
@@ -254,7 +254,7 @@ describe("Test buy and sell orders", function () {
         const { v, r, s } = ethers.utils.splitSignature(rawSignature);
         const buyOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 }
 
-        /* bob fills sell order with swap to sushi */
+        /* bob fills buy order with swap to sushi */
         await this.erc721.connect(this.bob).approve(this.zeroEx.address, "420")
         const tx = await this.zeroEx.connect(this.bob).sellAndSwapERC721(
             {
@@ -278,10 +278,10 @@ describe("Test buy and sell orders", function () {
         const bobERC721Balance = await this.erc721.balanceOf(this.bob.address)
         const bobSUSHIBalance = await this.sushi.balanceOf(this.bob.address)
 
-        expect(aliceWETHBalance, "0")
-        expect(aliceERC721Balance, "1")
-        expect(bobWETHBalance, "0")
-        expect(bobSUSHIBalance).to.not.be.null;
-        expect(bobERC721Balance, "0")
+        expect(Number(aliceWETHBalance.toString())).to.be.greaterThan(0)
+        expect(aliceERC721Balance.toString()).to.be.eq("1")
+        expect(Number(bobWETHBalance.toString())).to.be.lessThan(50000)
+        expect(Number(bobSUSHIBalance.toString())).to.be.greaterThan(0)
+        expect(bobERC721Balance.toString()).to.be.eq("0")
     });
 });
