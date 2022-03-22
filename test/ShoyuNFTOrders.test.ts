@@ -1,10 +1,13 @@
 import { ethers } from "hardhat";
-import { expect } from "chai";
+import { expect, use } from "chai";
 import { BigNumber } from "@0x/utils"
 import { AddressZero, MaxUint256 } from "@ethersproject/constants"
+import { solidity } from "ethereum-waffle"
 
-import { SignatureType } from "../contracts/0x/utils/signature_utils";
-import { ERC721Order, NFTOrder, TradeDirection } from "../contracts/0x/utils/nft_orders";
+import { SignatureType } from "../contracts/0x/utils/signature_utils"
+import { ERC721Order, NFTOrder, TradeDirection } from "../contracts/0x/utils/nft_orders"
+
+use(solidity)
 
 describe("Test buy and sell orders", function () {
     before(async function () {
@@ -80,8 +83,8 @@ describe("Test buy and sell orders", function () {
         await this.sushiswapRouter.connect(this.minter).addLiquidity(
             this.weth.address,
             this.sushi.address,
-            ethers.BigNumber.from('50000'),
-            ethers.BigNumber.from('100000'),
+            '50000',
+            '100000',
             0,
             0,
             this.minter.address,
@@ -216,10 +219,10 @@ describe("Test buy and sell orders", function () {
         const bobWETHBalance = await this.weth.balanceOf(this.bob.address)
         const bobERC721Balance = await this.erc721.balanceOf(this.bob.address)
 
-        expect(aliceWETHBalance.toString()).to.be.eq("45000")
-        expect(aliceERC721Balance.toString()).to.eq("1")
-        expect(bobWETHBalance.toString()).to.eq("5000")
-        expect(bobERC721Balance.toString()).to.eq("0")
+        expect(aliceWETHBalance).to.eq("45000")
+        expect(aliceERC721Balance).to.eq("1")
+        expect(bobWETHBalance).to.eq("5000")
+        expect(bobERC721Balance).to.eq("0")
     });
 
     it("NFT owner can fill offer with swap (sell order)", async function() {
@@ -258,17 +261,17 @@ describe("Test buy and sell orders", function () {
         const tx = await this.zeroEx.connect(this.bob).sellAndSwapERC721(
             {
                 ...buyOrder,
-                expiry: ethers.BigNumber.from(buyOrder.expiry.toString()),
-                nonce: ethers.BigNumber.from(buyOrder.nonce.toString()),
-                erc20TokenAmount: ethers.BigNumber.from(buyOrder.erc20TokenAmount.toString()),
-                erc721TokenId: ethers.BigNumber.from(buyOrder.erc721TokenId.toString())
-            },                      // LibNFTOrder
-            buyOrderSignature,      // LibSignature
-            ethers.BigNumber.from(buyOrder.erc721TokenId.toString()), // tokenId
-            false,                  // unwrap
-            "0x",                   // callbackData
-            this.sushi.address,     // outputToken
-            0                       // minAmountOut
+                expiry: buyOrder.expiry.toString(),
+                nonce: buyOrder.nonce.toString(),
+                erc20TokenAmount: buyOrder.erc20TokenAmount.toString(),
+                erc721TokenId: buyOrder.erc721TokenId.toString()
+            },                                  // LibNFTOrder
+            buyOrderSignature,                  // LibSignature
+            buyOrder.erc721TokenId.toString(),  // tokenId
+            false,                              // unwrap
+            "0x",                               // callbackData
+            this.sushi.address,                 // outputToken
+            0                                   // minAmountOut
         )
 
         const aliceWETHBalance = await this.weth.balanceOf(this.alice.address)
@@ -277,11 +280,11 @@ describe("Test buy and sell orders", function () {
         const bobERC721Balance = await this.erc721.balanceOf(this.bob.address)
         const bobSUSHIBalance = await this.sushi.balanceOf(this.bob.address)
 
-        expect(Number(aliceWETHBalance.toString())).to.be.greaterThan(0)
-        expect(aliceERC721Balance.toString()).to.be.eq("1")
-        expect(Number(bobWETHBalance.toString())).to.be.lessThan(50000)
-        expect(Number(bobSUSHIBalance.toString())).to.be.greaterThan(0)
-        expect(bobERC721Balance.toString()).to.be.eq("0")
+        expect(aliceWETHBalance).to.gt(0)
+        expect(aliceERC721Balance).to.eq(1)
+        expect(bobWETHBalance).to.lt(50000)
+        expect(bobSUSHIBalance).to.gt(0)
+        expect(bobERC721Balance).to.eq(0)
     });
 
     it("NFT owner can list an item for sale (sell order) & buyer can fill order", async function() {
@@ -320,10 +323,10 @@ describe("Test buy and sell orders", function () {
         const tx = await this.zeroEx.connect(this.bob).buyERC721(
             {
                 ...sellOrder,
-                expiry: ethers.BigNumber.from(sellOrder.expiry.toString()),
-                nonce: ethers.BigNumber.from(sellOrder.nonce.toString()),
-                erc20TokenAmount: ethers.BigNumber.from(sellOrder.erc20TokenAmount.toString()),
-                erc721TokenId: ethers.BigNumber.from(sellOrder.erc721TokenId.toString())
+                expiry: sellOrder.expiry.toString(),
+                nonce: sellOrder.nonce.toString(),
+                erc20TokenAmount:sellOrder.erc20TokenAmount.toString(),
+                erc721TokenId: sellOrder.erc721TokenId.toString()
             },                      // LibNFTOrder
             sellOrderSignature,     // LibSignature
             "0x",                   // callbackData
@@ -334,10 +337,10 @@ describe("Test buy and sell orders", function () {
         const bobWETHBalance = await this.weth.balanceOf(this.bob.address)
         const bobERC721Balance = await this.erc721.balanceOf(this.bob.address)
 
-        expect(aliceWETHBalance.toString()).to.eq(sellOrder.erc20TokenAmount.toString())
-        expect(aliceERC721Balance.toString()).to.eq("0")
-        expect(Number(bobWETHBalance.toString())).to.lessThan(50000)
-        expect(bobERC721Balance.toString()).to.eq("1")
+        expect(aliceWETHBalance).to.eq(sellOrder.erc20TokenAmount.toString())
+        expect(aliceERC721Balance).to.eq("0")
+        expect(bobWETHBalance).to.lt(50000)
+        expect(bobERC721Balance).to.eq("1")
     });
 
     it("NFT owner can list an item for sale (sell order) & buyer can swap token to fill order", async function() {
@@ -376,10 +379,10 @@ describe("Test buy and sell orders", function () {
         const tx = await this.zeroEx.connect(this.bob).buyAndSwapERC721(
             {
                 ...sellOrder,
-                expiry: ethers.BigNumber.from(sellOrder.expiry.toString()),
-                nonce: ethers.BigNumber.from(sellOrder.nonce.toString()),
-                erc20TokenAmount: ethers.BigNumber.from(sellOrder.erc20TokenAmount.toString()),
-                erc721TokenId: ethers.BigNumber.from(sellOrder.erc721TokenId.toString())
+                expiry: sellOrder.expiry.toString(),
+                nonce: sellOrder.nonce.toString(),
+                erc20TokenAmount: sellOrder.erc20TokenAmount.toString(),
+                erc721TokenId: sellOrder.erc721TokenId.toString()
             },                      // LibNFTOrder
             sellOrderSignature,     // LibSignature
             "0x",                   // callbackData
@@ -393,11 +396,11 @@ describe("Test buy and sell orders", function () {
         const bobWETHBalance = await this.weth.balanceOf(this.bob.address)
         const bobERC721Balance = await this.erc721.balanceOf(this.bob.address)
 
-        expect(aliceWETHBalance.toString()).to.eq("0")
-        expect(aliceERC721Balance.toString()).to.eq("0")
-        expect(aliceSUSHIBalance.toString()).to.eq(sellOrder.erc20TokenAmount.toString())
-        expect(Number(bobWETHBalance.toString())).to.lessThan(50000)
-        expect(bobERC721Balance.toString()).to.eq("1")
+        expect(aliceWETHBalance).to.eq("0")
+        expect(aliceERC721Balance).to.eq("0")
+        expect(aliceSUSHIBalance).to.eq(sellOrder.erc20TokenAmount.toString())
+        expect(bobWETHBalance).to.lt(50000)
+        expect(bobERC721Balance).to.eq("1")
     });
 
     it("Buyer can swap and fill sell order by paying ETH", async function() {
@@ -434,10 +437,10 @@ describe("Test buy and sell orders", function () {
         const tx = await this.zeroEx.connect(this.bob).buyAndSwapERC721(
             {
                 ...sellOrder,
-                expiry: ethers.BigNumber.from(sellOrder.expiry.toString()),
-                nonce: ethers.BigNumber.from(sellOrder.nonce.toString()),
-                erc20TokenAmount: ethers.BigNumber.from(sellOrder.erc20TokenAmount.toString()),
-                erc721TokenId: ethers.BigNumber.from(sellOrder.erc721TokenId.toString())
+                expiry: sellOrder.expiry.toString(),
+                nonce: sellOrder.nonce.toString(),
+                erc20TokenAmount: sellOrder.erc20TokenAmount.toString(),
+                erc721TokenId: sellOrder.erc721TokenId.toString()
             },                      // LibNFTOrder
             sellOrderSignature,     // LibSignature
             "0x",                   // callbackData
@@ -452,11 +455,11 @@ describe("Test buy and sell orders", function () {
         const bobWETHBalance = await this.weth.balanceOf(this.bob.address)
         const bobERC721Balance = await this.erc721.balanceOf(this.bob.address)
 
-        expect(aliceWETHBalance.toString()).to.eq("0")
-        expect(aliceERC721Balance.toString()).to.eq("0")
-        expect(aliceSUSHIBalance.toString()).to.eq(sellOrder.erc20TokenAmount.toString())
-        expect(Number(bobWETHBalance.toString())).to.lessThan(50000)
-        expect(bobERC721Balance.toString()).to.eq("1")
+        expect(aliceWETHBalance).to.eq("0")
+        expect(aliceERC721Balance).to.eq("0")
+        expect(aliceSUSHIBalance).to.eq(sellOrder.erc20TokenAmount.toString())
+        expect(bobWETHBalance).to.lt(50000)
+        expect(bobERC721Balance).to.eq("1")
     });
 
     it("Buyer can swap and fill sell order, with seller receiving ETH", async function() {
@@ -497,10 +500,10 @@ describe("Test buy and sell orders", function () {
         const tx = await this.zeroEx.connect(this.bob).buyAndSwapERC721(
             {
                 ...sellOrder,
-                expiry: ethers.BigNumber.from(sellOrder.expiry.toString()),
-                nonce: ethers.BigNumber.from(sellOrder.nonce.toString()),
-                erc20TokenAmount: ethers.BigNumber.from(sellOrder.erc20TokenAmount.toString()),
-                erc721TokenId: ethers.BigNumber.from(sellOrder.erc721TokenId.toString())
+                expiry: sellOrder.expiry.toString(),
+                nonce: sellOrder.nonce.toString(),
+                erc20TokenAmount: sellOrder.erc20TokenAmount.toString(),
+                erc721TokenId: sellOrder.erc721TokenId.toString()
             },                      // LibNFTOrder
             sellOrderSignature,     // LibSignature
             "0x",                   // callbackData
@@ -515,13 +518,11 @@ describe("Test buy and sell orders", function () {
         const bobWETHBalance = await this.weth.balanceOf(this.bob.address)
         const bobERC721Balance = await this.erc721.balanceOf(this.bob.address)
 
-        expect(aliceWETHBalance.toString()).to.eq("0")
-        expect(aliceERC721Balance.toString()).to.eq("0")
-        expect(aliceSUSHIBalance.toString()).to.eq("0")
-        expect(aliceETHBalanceBefore.toString()).to.not.be.eq(sellOrder.erc20TokenAmount.toString())
-        expect(Number(bobWETHBalance.toString())).to.lessThan(50000)
-        expect(bobERC721Balance.toString()).to.eq("1")
-
-        // todo - chai use ethers big number
+        expect(aliceWETHBalance).to.eq("0")
+        expect(aliceERC721Balance).to.eq("0")
+        expect(aliceSUSHIBalance).to.eq("0")
+        expect(aliceETHBalanceBefore).to.gt(aliceETHBalanceAfter)
+        expect(bobWETHBalance).to.lt(50000)
+        expect(bobERC721Balance).to.eq("1")
     });
 });
