@@ -14,6 +14,7 @@
   "scripts": {
     "build": "hardhat compile",
     "console": "hardhat console",
+    "deploy": "hardhat deploy",
     "ethereum:deploy": "hardhat --network ethereum deploy",
     "ethereum:verify": "hardhat --network ethereum etherscan-verify --license MIT",
     "ethereum:export": "hardhat --network ethereum export",
@@ -91,6 +92,7 @@
     "@0x/contracts-utils": "^4.8.8",
     "@0x/dev-utils": "^4.2.12",
     "@0x/protocol-utils": "^1.11.1",
-    "@openzeppelin/contracts": "^3.1.0"
+    "@openzeppelin/contracts": "^3.1.0",
+    "@sushiswap/core-sdk": "^1.0.0-canary.34"
   }
 }

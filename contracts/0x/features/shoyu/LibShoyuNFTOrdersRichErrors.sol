@@ -20,31 +20,31 @@
 pragma solidity ^0.6.5;
 
 library LibShoyuNFTOrdersRichErrors {
-    // solhint-disable func-name-mixedcase
+  // solhint-disable func-name-mixedcase
 
-    function TokenSwapError(address token0, address token1)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return
-            abi.encodeWithSelector(
-                bytes4(keccak256("TokenSwapError(address,address)")),
-                token0,
-                token1
-            );
-    }
+  function TokenSwapError(address token0, address token1)
+    internal
+    pure
+    returns (bytes memory)
+  {
+    return
+      abi.encodeWithSelector(
+        bytes4(keccak256("TokenSwapError(address,address)")),
+        token0,
+        token1
+      );
+  }
 
-    function OverspentTokenError(uint256 tokenSpent, uint256 tokenAvailable)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return
-            abi.encodeWithSelector(
-                bytes4(keccak256("OverspentTokenError(uint256,uint256)")),
-                tokenSpent,
-                tokenAvailable
-            );
-    }
+  function OverspentTokenError(uint256 tokenSpent, uint256 tokenAvailable)
+    internal
+    pure
+    returns (bytes memory)
+  {
+    return
+      abi.encodeWithSelector(
+        bytes4(keccak256("OverspentTokenError(uint256,uint256)")),
+        tokenSpent,
+        tokenAvailable
+      );
+  }
 }
