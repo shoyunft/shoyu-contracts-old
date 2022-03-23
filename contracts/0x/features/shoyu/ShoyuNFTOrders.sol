@@ -198,6 +198,12 @@ abstract contract ShoyuNFTOrders is
     LibSignature.Signature memory signature,
     BuyAndSwapParams memory params
   ) internal returns (uint256 erc20FillAmount) {
+    // Input token must be different than sellOrder.erc20Token
+    require(
+      params.inputToken != sellOrder.erc20Token,
+      "ShoyuNFTOrders::_buyAndSwapNFT/SAME_TOKEN"
+    );
+
     LibNFTOrder.OrderInfo memory orderInfo = _getOrderInfo(sellOrder);
     // Check that the order can be filled.
     _validateSellOrder(sellOrder, signature, orderInfo, msg.sender);
@@ -258,91 +264,43 @@ abstract contract ShoyuNFTOrders is
     }
 
     address[] memory path = new address[](2);
+    path[0] = address(params.inputToken);
+    path[1] = address(WETH);
 
-    if (address(params.inputToken) == NATIVE_TOKEN_ADDRESS) {
-      path[0] = address(WETH);
-      path[1] = address(sellOrder.erc20Token);
+    uint256[] memory amountsIn = SushiswapRouter.getAmountsIn(
+      erc20FillAmount,
+      path
+    );
 
-      SushiswapRouter.swapETHForExactTokens{value: ethAvailable}(
-        erc20FillAmount,
-        path,
-        sellOrder.maker,
-        sellOrder.expiry
-      );
+    // Transfer the ERC20 from the maker to the Exchange Proxy
+    // so we can swap it before sending it to the seller.
+    // TODO: Probably safe to just use ERC20.transferFrom for some
+    //       small gas savings
+    _transferERC20TokensFrom(
+      params.inputToken,
+      msg.sender,
+      address(this),
+      amountsIn[0]
+    );
 
-      // Fees are paid from the EP's current balance of ETH.
-      // _payEthFees(
-      //     sellOrder,
-      //     params.buyAmount,
-      //     orderInfo.orderAmount,
-      //     erc20FillAmount,
-      //     ethAvailable
-      // );
-    } else {
-      uint256 erc20BalanceBefore = params.inputToken.balanceOf(address(this));
+    params.inputToken.approve(address(SushiswapRouter), params.maxAmountIn);
 
-      // Transfer the ERC20 from the maker to the Exchange Proxy
-      // so we can swap it before sending it to the seller.
-      // TODO: Probably safe to just use ERC20.transferFrom for some
-      //       small gas savings
-      _transferERC20TokensFrom(
-        params.inputToken,
-        msg.sender,
-        address(this),
-        params.maxAmountIn
-      );
+    SushiswapRouter.swapTokensForExactETH(
+      erc20FillAmount,
+      params.maxAmountIn,
+      path,
+      sellOrder.maker,
+      sellOrder.expiry
+    );
 
-      params.inputToken.approve(address(SushiswapRouter), params.maxAmountIn);
-
-      if (address(sellOrder.erc20Token) == NATIVE_TOKEN_ADDRESS) {
-        path[0] = address(params.inputToken);
-        path[1] = address(WETH);
-        SushiswapRouter.swapTokensForExactETH(
-          erc20FillAmount,
-          params.maxAmountIn,
-          path,
-          sellOrder.maker,
-          sellOrder.expiry
-        );
-      } else {
-        path[0] = address(params.inputToken);
-        path[1] = address(sellOrder.erc20Token);
-        SushiswapRouter.swapTokensForExactTokens(
-          erc20FillAmount,
-          params.maxAmountIn,
-          path,
-          sellOrder.maker,
-          sellOrder.expiry
-        );
-      }
-
-      // The buyer pays fees using WETH.
-      // _payFees(
-      //     sellOrder,
-      //     msg.sender,
-      //     params.buyAmount,
-      //     orderInfo.orderAmount,
-      //     false
-      // );
-
-      uint256 erc20BalanceAfter = params.inputToken.balanceOf(address(this));
-
-      // Cannot use pre-existing ERC20 balance
-      if (erc20BalanceAfter < erc20BalanceBefore) {
-        LibNFTOrdersRichErrors
-          .OverspentEthError(
-            params.maxAmountIn + (erc20BalanceBefore - erc20BalanceAfter),
-            params.maxAmountIn
-          )
-          .rrevert();
-      }
-
-      // Return dust
-      params.inputToken.transfer(
-        msg.sender,
-        erc20BalanceAfter - erc20BalanceBefore
-      );
-    }
+    // The buyer pays fees using ETH.
+    // _payFees(
+    //     sellOrder,
+    //     msg.sender,
+    //     params.buyAmount,
+    //     orderInfo.orderAmount,
+    //     false
+    // );
   }
 
   function _validateSellOrder(
@@ -355,6 +313,11 @@ abstract contract ShoyuNFTOrders is
     require(
       sellOrder.direction == LibNFTOrder.TradeDirection.SELL_NFT,
       "ShoyuNFTOrders::_validateSellOrder/WRONG_TRADE_DIRECTION"
+    );
+    // Sell order must be fillable with NATIVE_TOKEN
+    require(
+      address(sellOrder.erc20Token) == NATIVE_TOKEN_ADDRESS,
+      "ShoyuNFTOrders::_validateSellOrder/NOT_NATIVE_TOKEN"
     );
     // Taker must match the order taker, if one is specified.
     if (sellOrder.taker != address(0) && sellOrder.taker != taker) {
