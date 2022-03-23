@@ -56,6 +56,10 @@ const deployFunction: DeployFunction = async function ({
 
 export default deployFunction;
 
-deployFunction.dependencies = ["ZeroEx", "Sushiswap"];
+deployFunction.dependencies = [
+  "ZeroEx",
+  "ZeroExERC721OrdersFeature",
+  "Sushiswap",
+];
 
 deployFunction.tags = ["ShoyuERC721OrdersFeature"];

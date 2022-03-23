@@ -18,7 +18,6 @@ const deployFunction: DeployFunction = async function ({
   });
 
   const weth9Mock = await ethers.getContract("WETH9Mock");
-  await weth9Mock.deposit({ value: 100 });
 
   console.log("WETH9Mock deployed at ", weth9Mock.address);
 };

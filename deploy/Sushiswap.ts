@@ -36,8 +36,8 @@ const deployFunction: DeployFunction = async function ({
     args: [sushiswapFactory.address, wethAddress],
   });
 
-  console.log("Sushiswap router deployed at ", sushiswapFactory.address);
-  console.log("Sushiswap factory deployed at ", sushiswapRouter.address);
+  console.log("Sushiswap factory deployed at ", sushiswapFactory.address);
+  console.log("Sushiswap router deployed at ", sushiswapRouter.address);
 };
 
 export default deployFunction;
