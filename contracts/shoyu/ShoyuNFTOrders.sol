@@ -5,17 +5,16 @@ import "@0x/contracts-erc20/contracts/src/v06/IERC20TokenV06.sol";
 import "@0x/contracts-erc20/contracts/src/v06/IEtherTokenV06.sol";
 import "@0x/contracts-utils/contracts/src/v06/LibMathV06.sol";
 import "@0x/contracts-utils/contracts/src/v06/LibSafeMathV06.sol";
-import "../../errors/LibNFTOrdersRichErrors.sol";
-import "../../fixins/FixinCommon.sol";
-import "../../fixins/FixinEIP712.sol";
-import "../../fixins/FixinTokenSpender.sol";
-import "../../migrations/LibMigrate.sol";
-import "../../vendor/IFeeRecipient.sol";
-import "../../vendor/ITakerCallback.sol";
-import "../libs/LibSignature.sol";
-import "../libs/LibNFTOrder.sol";
-import "../../IZeroEx.sol";
-import "../../../sushiswap/uniswapv2/interfaces/IUniswapV2Router02.sol";
+import "../0x/errors/LibNFTOrdersRichErrors.sol";
+import "../0x/fixins/FixinCommon.sol";
+import "../0x/fixins/FixinEIP712.sol";
+import "../0x/fixins/FixinTokenSpender.sol";
+import "../0x/migrations/LibMigrate.sol";
+import "../0x/vendor/IFeeRecipient.sol";
+import "../0x/vendor/ITakerCallback.sol";
+import "../0x/features/libs/LibSignature.sol";
+import "../0x/features/libs/LibNFTOrder.sol";
+import "../sushiswap/uniswapv2/interfaces/IUniswapV2Router02.sol";
 import "./LibShoyuNFTOrder.sol";
 
 /// @dev Abstract base contract inherited by ShoyuERC721OrdersFeature and ShoyuERC1155OrdersFeature

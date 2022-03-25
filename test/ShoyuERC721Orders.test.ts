@@ -49,7 +49,7 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
     this.zeroEx = await ethers.getContract("ZeroEx");
     this.weth = await ethers.getContract("WETH9Mock");
 
-    this.zeroEx = await ethers.getContractAt("IZeroEx", this.zeroEx.address);
+    this.shoyuEx = await ethers.getContractAt("IShoyuEx", this.zeroEx.address);
   });
 
   beforeEach(async function () {
@@ -76,10 +76,10 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
     await this.erc721.mint(this.bob.address, "420");
 
     /* alice creates a buy order for bob's nft with weth */
-    await this.weth.connect(this.alice).approve(this.zeroEx.address, "50000");
+    await this.weth.connect(this.alice).approve(this.shoyuEx.address, "50000");
     const buyOrder = new ERC721Order({
       chainId: 31337,
-      verifyingContract: this.zeroEx.address,
+      verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.BuyNFT,
       erc20Token: this.weth.address,
       erc20TokenAmount: new BigNumber(5000),
@@ -107,8 +107,8 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
     const buyOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 };
 
     /* bob fills buy order with swap to sushi */
-    await this.erc721.connect(this.bob).approve(this.zeroEx.address, "420");
-    const tx = await this.zeroEx.connect(this.bob).sellAndSwapERC721(
+    await this.erc721.connect(this.bob).approve(this.shoyuEx.address, "420");
+    const tx = await this.shoyuEx.connect(this.bob).sellAndSwapERC721(
       {
         ...buyOrder,
         expiry: buyOrder.expiry.toString(),
@@ -142,11 +142,11 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
     await this.sushi.transfer(this.bob.address, "5000");
 
     /* alice creates sell order for nft */
-    await this.erc721.connect(this.alice).approve(this.zeroEx.address, "420");
+    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "420");
     const aliceETHBalanceBefore = await this.alice.getBalance();
     const sellOrder = new ERC721Order({
       chainId: 31337,
-      verifyingContract: this.zeroEx.address,
+      verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
       erc20TokenAmount: new BigNumber(100),
@@ -174,8 +174,8 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
     const sellOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 };
 
     /* bob fills sell order and swaps SUSHI to ETH to fill order */
-    await this.sushi.connect(this.bob).approve(this.zeroEx.address, "5000");
-    const tx = await this.zeroEx.connect(this.bob).buyAndSwapERC721(
+    await this.sushi.connect(this.bob).approve(this.shoyuEx.address, "5000");
+    const tx = await this.shoyuEx.connect(this.bob).buyAndSwapERC721(
       {
         ...sellOrder,
         expiry: sellOrder.expiry.toString(),
@@ -216,10 +216,10 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
     await this.erc20.transfer(this.bob.address, "6969");
 
     /* alice creates sell order for nft */
-    await this.erc721.connect(this.alice).approve(this.zeroEx.address, "420");
+    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "420");
     const sellOrder = new ERC721Order({
       chainId: 31337,
-      verifyingContract: this.zeroEx.address,
+      verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
       erc20TokenAmount: new BigNumber(100),
@@ -251,9 +251,13 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
     const bobSUSHIBalanceBefore = await this.sushi.balanceOf(this.bob.address);
 
     /* bob fills sell order and swaps SUSHI and ERC20 to ETH to fill order */
-    await this.sushi.connect(this.bob).approve(this.zeroEx.address, MaxUint256);
-    await this.erc20.connect(this.bob).approve(this.zeroEx.address, MaxUint256);
-    const tx = await this.zeroEx.connect(this.bob).buyAndSwapERC721(
+    await this.sushi
+      .connect(this.bob)
+      .approve(this.shoyuEx.address, MaxUint256);
+    await this.erc20
+      .connect(this.bob)
+      .approve(this.shoyuEx.address, MaxUint256);
+    const tx = await this.shoyuEx.connect(this.bob).buyAndSwapERC721(
       {
         ...sellOrder,
         expiry: sellOrder.expiry.toString(),

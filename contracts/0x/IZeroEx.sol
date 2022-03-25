@@ -37,30 +37,28 @@ import "./features/interfaces/IFundRecoveryFeature.sol";
 import "./features/interfaces/IERC721OrdersFeature.sol";
 import "./features/interfaces/IERC1155OrdersFeature.sol";
 import "./features/interfaces/IERC165Feature.sol";
-import "./features/shoyu/IShoyuERC721OrdersFeature.sol";
 
 /// @dev Interface for a fully featured Exchange Proxy.
 interface IZeroEx is
-    IOwnableFeature,
-    ISimpleFunctionRegistryFeature,
-    ITransformERC20Feature,
-    IMetaTransactionsFeature,
-    IUniswapFeature,
-    IUniswapV3Feature,
-    IPancakeSwapFeature,
-    ILiquidityProviderFeature,
-    INativeOrdersFeature,
-    IBatchFillNativeOrdersFeature,
-    IMultiplexFeature,
-    IOtcOrdersFeature,
-    IFundRecoveryFeature,
-    IERC721OrdersFeature,
-    IERC1155OrdersFeature,
-    IERC165Feature,
-    IShoyuERC721OrdersFeature
+  IOwnableFeature,
+  ISimpleFunctionRegistryFeature,
+  ITransformERC20Feature,
+  IMetaTransactionsFeature,
+  IUniswapFeature,
+  IUniswapV3Feature,
+  IPancakeSwapFeature,
+  ILiquidityProviderFeature,
+  INativeOrdersFeature,
+  IBatchFillNativeOrdersFeature,
+  IMultiplexFeature,
+  IOtcOrdersFeature,
+  IFundRecoveryFeature,
+  IERC721OrdersFeature,
+  IERC1155OrdersFeature,
+  IERC165Feature
 {
-    // solhint-disable state-visibility
+  // solhint-disable state-visibility
 
-    /// @dev Fallback for just receiving ether.
-    receive() external payable;
+  /// @dev Fallback for just receiving ether.
+  receive() external payable;
 }

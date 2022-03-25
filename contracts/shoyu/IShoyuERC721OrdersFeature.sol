@@ -2,9 +2,9 @@ pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
 import "@0x/contracts-erc20/contracts/src/v06/IERC20TokenV06.sol";
-import "../libs/LibNFTOrder.sol";
-import "../libs/LibSignature.sol";
-import "../../vendor/IERC721Token.sol";
+import "../0x/features/libs/LibNFTOrder.sol";
+import "../0x/features/libs/LibSignature.sol";
+import "../0x/vendor/IERC721Token.sol";
 import "./LibShoyuNFTOrder.sol";
 
 interface IShoyuERC721OrdersFeature {
