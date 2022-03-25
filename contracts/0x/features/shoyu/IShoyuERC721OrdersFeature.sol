@@ -5,6 +5,7 @@ import "@0x/contracts-erc20/contracts/src/v06/IERC20TokenV06.sol";
 import "../libs/LibNFTOrder.sol";
 import "../libs/LibSignature.sol";
 import "../../vendor/IERC721Token.sol";
+import "./LibShoyuNFTOrder.sol";
 
 interface IShoyuERC721OrdersFeature {
   /// @dev Sells an ERC721 asset to fill the given order.
@@ -44,8 +45,7 @@ interface IShoyuERC721OrdersFeature {
     LibNFTOrder.ERC721Order calldata sellOrder,
     LibSignature.Signature calldata signature,
     bytes calldata callbackData,
-    IERC20TokenV06 inputToken,
-    uint256 maxAmountIn
+    LibShoyuNFTOrder.SwapExactOutDetails[] memory swapDetails
   ) external payable;
 
   /// @dev Emitted whenever an `ERC721Order` is filled.

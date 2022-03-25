@@ -10,8 +10,10 @@ import "../interfaces/IFeature.sol";
 import "../interfaces/IERC721OrdersFeature.sol";
 import "../libs/LibNFTOrder.sol";
 import "../libs/LibSignature.sol";
-import "./ShoyuNFTOrders.sol";
 import "../../../sushiswap/uniswapv2/interfaces/IUniswapV2Router02.sol";
+import "./IShoyuERC721OrdersFeature.sol";
+import "./LibShoyuNFTOrder.sol";
+import "./ShoyuNFTOrders.sol";
 
 /// @dev Feature for interacting with ERC721 orders.
 contract ShoyuERC721OrdersFeature is
@@ -23,6 +25,7 @@ contract ShoyuERC721OrdersFeature is
   using LibSafeMathV06 for uint256;
   using LibNFTOrder for LibNFTOrder.ERC721Order;
   using LibNFTOrder for LibNFTOrder.NFTOrder;
+  using LibShoyuNFTOrder for LibShoyuNFTOrder.SwapExactOutDetails;
 
   /// @dev Name of this feature.
   string public constant override FEATURE_NAME = "ShoyuERC721Orders";
@@ -95,8 +98,7 @@ contract ShoyuERC721OrdersFeature is
     LibNFTOrder.ERC721Order memory sellOrder,
     LibSignature.Signature memory signature,
     bytes memory callbackData,
-    IERC20TokenV06 inputToken,
-    uint256 maxAmountIn
+    LibShoyuNFTOrder.SwapExactOutDetails[] memory swapDetails
   ) public payable override {
     uint256 ethBalanceBefore = address(this).balance.safeSub(msg.value);
     _buyAndSwapERC721(
@@ -104,8 +106,7 @@ contract ShoyuERC721OrdersFeature is
       signature,
       msg.value,
       callbackData,
-      inputToken,
-      maxAmountIn
+      swapDetails
     );
     uint256 ethBalanceAfter = address(this).balance;
     // Cannot use pre-existing ETH balance
@@ -168,8 +169,7 @@ contract ShoyuERC721OrdersFeature is
     LibSignature.Signature memory signature,
     uint256 ethAvailable,
     bytes memory takerCallbackData,
-    IERC20TokenV06 inputToken,
-    uint256 maxAmountIn
+    LibShoyuNFTOrder.SwapExactOutDetails[] memory swapDetails
   ) public payable {
     _buyAndSwapNFT(
       sellOrder.asNFTOrder(),
@@ -178,8 +178,7 @@ contract ShoyuERC721OrdersFeature is
         1, // buy amount
         ethAvailable,
         takerCallbackData,
-        inputToken,
-        maxAmountIn
+        swapDetails
       )
     );
 

@@ -16,6 +16,7 @@ import "../libs/LibSignature.sol";
 import "../libs/LibNFTOrder.sol";
 import "../../IZeroEx.sol";
 import "../../../sushiswap/uniswapv2/interfaces/IUniswapV2Router02.sol";
+import "./LibShoyuNFTOrder.sol";
 
 /// @dev Abstract base contract inherited by ShoyuERC721OrdersFeature and ShoyuERC1155OrdersFeature
 abstract contract ShoyuNFTOrders is
@@ -65,8 +66,7 @@ abstract contract ShoyuNFTOrders is
     uint128 buyAmount;
     uint256 ethAvailable;
     bytes takerCallbackData;
-    IERC20TokenV06 inputToken;
-    uint256 maxAmountIn;
+    LibShoyuNFTOrder.SwapExactOutDetails[] swapDetails;
   }
 
   function _sellAndSwapNFT(
@@ -192,18 +192,57 @@ abstract contract ShoyuNFTOrders is
     // );
   }
 
+  function _swapMultipleTokensForETH(
+    LibShoyuNFTOrder.SwapExactOutDetails[] memory swapDetails,
+    uint256 expiry
+  ) internal returns (uint256 amountOut) {
+    amountOut = 0;
+
+    for (uint256 i = 0; i < swapDetails.length; i++) {
+      uint256[] memory amounts = SushiswapRouter.getAmountsIn(
+        swapDetails[i].amountOut,
+        swapDetails[i].path
+      );
+
+      require(
+        amounts[0] <= swapDetails[i].maxAmountIn,
+        "ShoyuNFTOrders::_buyAndSwapNFT/INSUFFICIENT_FUNDS"
+      );
+
+      // Transfer the ERC20 from the maker to the Exchange Proxy
+      // so we can swap it before sending it to the seller.
+      // TODO: Probably safe to just use ERC20.transferFrom for some
+      //       small gas savings
+      _transferERC20TokensFrom(
+        IERC20TokenV06(swapDetails[i].path[0]),
+        msg.sender,
+        address(this),
+        amounts[0]
+      );
+
+      IERC20TokenV06(swapDetails[i].path[0]).approve(
+        address(SushiswapRouter),
+        amounts[0]
+      );
+
+      SushiswapRouter.swapTokensForExactETH(
+        swapDetails[i].amountOut,
+        swapDetails[i].maxAmountIn,
+        swapDetails[i].path,
+        address(this),
+        expiry
+      );
+
+      amountOut = amountOut.safeAdd(amounts[amounts.length - 1]);
+    }
+  }
+
   // Core settlement logic for buying an NFT asset.
   function _buyAndSwapNFT(
     LibNFTOrder.NFTOrder memory sellOrder,
     LibSignature.Signature memory signature,
     BuyAndSwapParams memory params
   ) internal returns (uint256 erc20FillAmount) {
-    // Input token must be different than sellOrder.erc20Token
-    require(
-      params.inputToken != sellOrder.erc20Token,
-      "ShoyuNFTOrders::_buyAndSwapNFT/SAME_TOKEN"
-    );
-
     LibNFTOrder.OrderInfo memory orderInfo = _getOrderInfo(sellOrder);
     // Check that the order can be filled.
     _validateSellOrder(sellOrder, signature, orderInfo, msg.sender);
@@ -243,7 +282,7 @@ abstract contract ShoyuNFTOrders is
     if (params.takerCallbackData.length > 0) {
       require(
         msg.sender != address(this),
-        "ShoyuNFTOrders::_buyNFT/CANNOT_CALLBACK_SELF"
+        "ShoyuNFTOrders::_buyAndSwapNFT/CANNOT_CALLBACK_SELF"
       );
       uint256 ethBalanceBeforeCallback = address(this).balance;
       // Invoke the callback
@@ -259,39 +298,17 @@ abstract contract ShoyuNFTOrders is
       // Check for the magic success bytes
       require(
         callbackResult == TAKER_CALLBACK_MAGIC_BYTES,
-        "ShoyuNFTOrders::_buyNFT/CALLBACK_FAILED"
+        "ShoyuNFTOrders::_buyAndSwapNFT/CALLBACK_FAILED"
       );
     }
 
-    address[] memory path = new address[](2);
-    path[0] = address(params.inputToken);
-    path[1] = address(WETH);
-
-    uint256[] memory amountsIn = SushiswapRouter.getAmountsIn(
-      erc20FillAmount,
-      path
+    require(
+      _swapMultipleTokensForETH(params.swapDetails, sellOrder.expiry) ==
+        erc20FillAmount,
+      "ShoyuNFTOrders::_buyAndSwapNFT/INVALID_SWAP_PARAMS"
     );
 
-    // Transfer the ERC20 from the maker to the Exchange Proxy
-    // so we can swap it before sending it to the seller.
-    // TODO: Probably safe to just use ERC20.transferFrom for some
-    //       small gas savings
-    _transferERC20TokensFrom(
-      params.inputToken,
-      msg.sender,
-      address(this),
-      amountsIn[0]
-    );
-
-    params.inputToken.approve(address(SushiswapRouter), params.maxAmountIn);
-
-    SushiswapRouter.swapTokensForExactETH(
-      erc20FillAmount,
-      params.maxAmountIn,
-      path,
-      sellOrder.maker,
-      sellOrder.expiry
-    );
+    _transferEth(payable(sellOrder.maker), erc20FillAmount);
 
     // The buyer pays fees using ETH.
     // _payFees(
