@@ -8,7 +8,7 @@ const deployFunction: DeployFunction = async function ({
   getNamedAccounts,
   getChainId,
 }: HardhatRuntimeEnvironment) {
-  console.log("Running ShoyuERC721OrdersFeature deploy script");
+  console.log("Running ShoyuNFTOrdersFeature deploy script");
 
   const { deploy } = deployments;
 
@@ -30,14 +30,14 @@ const deployFunction: DeployFunction = async function ({
 
   const sushiswapRouter = await deployments.get("UniswapV2Router02");
 
-  const erc721OrdersFeature = await deploy("ShoyuERC721OrdersFeature", {
+  const shoyuNFTOrdersFeature = await deploy("ShoyuNFTOrdersFeature", {
     from: deployer,
     args: [zeroExContract.address, wethAddress, sushiswapRouter.address],
   });
 
-  const erc721OrdersFeatureContract = await ethers.getContractAt(
-    "ShoyuERC721OrdersFeature",
-    erc721OrdersFeature.address
+  const shoyuNFTOrdersFeatureContract = await ethers.getContractAt(
+    "ShoyuNFTOrdersFeature",
+    shoyuNFTOrdersFeature.address
   );
 
   const migrator = await ethers.getContractAt(
@@ -46,8 +46,8 @@ const deployFunction: DeployFunction = async function ({
   );
 
   await migrator.migrate(
-    erc721OrdersFeature.address,
-    erc721OrdersFeatureContract.interface.encodeFunctionData("migrate"),
+    shoyuNFTOrdersFeature.address,
+    shoyuNFTOrdersFeatureContract.interface.encodeFunctionData("migrate"),
     deployer
   );
 
@@ -62,4 +62,4 @@ deployFunction.dependencies = [
   "Sushiswap",
 ];
 
-deployFunction.tags = ["ShoyuERC721OrdersFeature"];
+deployFunction.tags = ["ShoyuNFTOrdersFeature"];

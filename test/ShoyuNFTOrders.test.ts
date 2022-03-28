@@ -1,21 +1,17 @@
 import { ethers, deployments } from "hardhat";
 import { expect, use } from "chai";
-import { BigNumber } from "@0x/utils";
 import { AddressZero, MaxUint256 } from "@ethersproject/constants";
+import { BigNumber } from "@ethersproject/bignumber";
 import { solidity } from "ethereum-waffle";
 
-import { SignatureType } from "../contracts/0x/utils/signature_utils";
-import {
-  ERC721Order,
-  NFTOrder,
-  TradeDirection,
-} from "../contracts/0x/utils/nft_orders";
-import { ETH_TOKEN_ADDRESS } from "../contracts/0x/utils/constants";
+import { SignatureType } from "../utils/signature_utils";
+import { NFTOrder, NFTStandard, TradeDirection } from "../utils/nft_orders";
+import { ETH_TOKEN_ADDRESS } from "../utils/constants";
 import { seedSushiswapPools } from "./fixtures/seedSushiswapPools";
 
 use(solidity);
 
-describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
+describe("Test ShoyuNFTOrders buy and sell orders with swap", function () {
   before(async function () {
     this.signers = await ethers.getSigners();
     this.deployer = this.signers[0];
@@ -43,7 +39,7 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
     await this.erc721.deployed();
 
     /* get deployed contracts */
-    await deployments.fixture(["ShoyuERC721OrdersFeature"]);
+    await deployments.fixture(["ShoyuNFTOrdersFeature"]);
     this.sushiswapFactory = await ethers.getContract("UniswapV2Factory");
     this.sushiswapRouter = await ethers.getContract("UniswapV2Router02");
     this.zeroEx = await ethers.getContract("ZeroEx");
@@ -77,23 +73,25 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
 
     /* alice creates a buy order for bob's nft with weth */
     await this.weth.connect(this.alice).approve(this.shoyuEx.address, "50000");
-    const buyOrder = new ERC721Order({
+    const buyOrder = new NFTOrder({
       chainId: 31337,
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.BuyNFT,
       erc20Token: this.weth.address,
-      erc20TokenAmount: new BigNumber(5000),
-      erc721Token: this.erc721.address,
-      erc721TokenId: new BigNumber(420),
+      erc20TokenAmount: BigNumber.from(5000),
+      nftStandard: NFTStandard.ERC721,
+      nftToken: this.erc721.address,
+      nftTokenId: BigNumber.from(420),
+      nftTokenAmount: BigNumber.from(1),
       maker: this.alice.address,
       taker: AddressZero,
-      nonce: new BigNumber(69),
-      expiry: new BigNumber(Math.floor(Date.now() / 1000) + 3600),
+      nonce: BigNumber.from(69),
+      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
     const { domain, message } = buyOrder.getEIP712TypedData();
     const types = {
-      [ERC721Order.STRUCT_NAME]: ERC721Order.STRUCT_ABI,
+      [NFTOrder.STRUCT_NAME]: NFTOrder.STRUCT_ABI,
       ["Fee"]: NFTOrder.FEE_ABI,
       ["Property"]: NFTOrder.PROPERTY_ABI,
     };
@@ -108,18 +106,11 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
 
     /* bob fills buy order with swap to sushi */
     await this.erc721.connect(this.bob).approve(this.shoyuEx.address, "420");
-    const tx = await this.shoyuEx.connect(this.bob).sellAndSwapERC721(
-      {
-        ...buyOrder,
-        expiry: buyOrder.expiry.toString(),
-        nonce: buyOrder.nonce.toString(),
-        erc20TokenAmount: buyOrder.erc20TokenAmount.toString(),
-        erc721TokenId: buyOrder.erc721TokenId.toString(),
-      }, // LibNFTOrder
+    const tx = await this.shoyuEx.connect(this.bob).sellAndSwapNFT(
+      buyOrder, // LibNFTOrder
       buyOrderSignature, // LibSignature
-      buyOrder.erc721TokenId.toString(), // tokenId
+      buyOrder.nftTokenId, // tokenId
       false, // unwrap
-      "0x", // callbackData
       this.sushi.address, // outputToken
       0 // minAmountOut
     );
@@ -144,23 +135,24 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
     /* alice creates sell order for nft */
     await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "420");
     const aliceETHBalanceBefore = await this.alice.getBalance();
-    const sellOrder = new ERC721Order({
+    const sellOrder = new NFTOrder({
       chainId: 31337,
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
-      erc20TokenAmount: new BigNumber(100),
-      erc721Token: this.erc721.address,
-      erc721TokenId: new BigNumber(420),
+      erc20TokenAmount: BigNumber.from(100),
+      nftToken: this.erc721.address,
+      nftTokenId: BigNumber.from(420),
+      nftTokenAmount: BigNumber.from(1),
       maker: this.alice.address,
       taker: AddressZero,
-      nonce: new BigNumber(69),
-      expiry: new BigNumber(Math.floor(Date.now() / 1000) + 3600),
+      nonce: BigNumber.from(69),
+      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
     const { domain, message } = sellOrder.getEIP712TypedData();
     const types = {
-      [ERC721Order.STRUCT_NAME]: ERC721Order.STRUCT_ABI,
+      [NFTOrder.STRUCT_NAME]: NFTOrder.STRUCT_ABI,
       ["Fee"]: NFTOrder.FEE_ABI,
       ["Property"]: NFTOrder.PROPERTY_ABI,
     };
@@ -175,22 +167,16 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
 
     /* bob fills sell order and swaps SUSHI to ETH to fill order */
     await this.sushi.connect(this.bob).approve(this.shoyuEx.address, "5000");
-    const tx = await this.shoyuEx.connect(this.bob).buyAndSwapERC721(
-      {
-        ...sellOrder,
-        expiry: sellOrder.expiry.toString(),
-        nonce: sellOrder.nonce.toString(),
-        erc20TokenAmount: sellOrder.erc20TokenAmount.toString(),
-        erc721TokenId: sellOrder.erc721TokenId.toString(),
-      }, // LibNFTOrder
+    const tx = await this.shoyuEx.connect(this.bob).buyAndSwapNFT(
+      sellOrder, // LibNFTOrder
       sellOrderSignature, // LibSignature
-      "0x", // callbackData
+      "1", // nftBuyAmount
       [
         {
           inputToken: this.sushi.address,
           maxAmountIn: MaxUint256,
           path: [this.sushi.address, this.weth.address],
-          amountOut: sellOrder.erc20TokenAmount.toString(),
+          amountOut: sellOrder.erc20TokenAmount,
         },
       ] // SwapExactOutDetails
     );
@@ -202,7 +188,7 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
     const bobSUSHIBalance = await this.sushi.balanceOf(this.bob.address);
 
     expect(aliceETHBalanceAfter).to.eq(
-      aliceETHBalanceBefore.add(sellOrder.erc20TokenAmount.toString())
+      aliceETHBalanceBefore.add(sellOrder.erc20TokenAmount)
     );
     expect(aliceERC721Balance).to.eq("0");
     expect(aliceSUSHIBalance).to.eq("0");
@@ -217,23 +203,24 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
 
     /* alice creates sell order for nft */
     await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "420");
-    const sellOrder = new ERC721Order({
+    const sellOrder = new NFTOrder({
       chainId: 31337,
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
-      erc20TokenAmount: new BigNumber(100),
-      erc721Token: this.erc721.address,
-      erc721TokenId: new BigNumber(420),
+      erc20TokenAmount: BigNumber.from(100),
+      nftToken: this.erc721.address,
+      nftTokenId: BigNumber.from(420),
+      nftTokenAmount: BigNumber.from(1),
       maker: this.alice.address,
       taker: AddressZero,
-      nonce: new BigNumber(69),
-      expiry: new BigNumber(Math.floor(Date.now() / 1000) + 3600),
+      nonce: BigNumber.from(69),
+      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
     const { domain, message } = sellOrder.getEIP712TypedData();
     const types = {
-      [ERC721Order.STRUCT_NAME]: ERC721Order.STRUCT_ABI,
+      [NFTOrder.STRUCT_NAME]: NFTOrder.STRUCT_ABI,
       ["Fee"]: NFTOrder.FEE_ABI,
       ["Property"]: NFTOrder.PROPERTY_ABI,
     };
@@ -257,34 +244,21 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
     await this.erc20
       .connect(this.bob)
       .approve(this.shoyuEx.address, MaxUint256);
-    const tx = await this.shoyuEx.connect(this.bob).buyAndSwapERC721(
-      {
-        ...sellOrder,
-        expiry: sellOrder.expiry.toString(),
-        nonce: sellOrder.nonce.toString(),
-        erc20TokenAmount: sellOrder.erc20TokenAmount.toString(),
-        erc721TokenId: sellOrder.erc721TokenId.toString(),
-      }, // LibNFTOrder
+    const tx = await this.shoyuEx.connect(this.bob).buyAndSwapNFT(
+      sellOrder, // LibNFTOrder
       sellOrderSignature, // LibSignature
-      "0x", // callbackData
+      "1", // nftBuyAmount
       [
         {
           path: [this.sushi.address, this.weth.address],
           maxAmountIn: MaxUint256,
-          amountOut: sellOrder.erc20TokenAmount
-            .multipliedBy(2)
-            .dividedBy(3)
-            .integerValue(BigNumber.ROUND_CEIL)
-            .toString(),
-        }, // pay 2/3 with sushi
+          amountOut: sellOrder.erc20TokenAmount.mul(3).div(4),
+        }, // pay 3/4 with sushi
         {
           path: [this.erc20.address, this.weth.address],
           maxAmountIn: MaxUint256,
-          amountOut: sellOrder.erc20TokenAmount
-            .dividedBy(3)
-            .integerValue(BigNumber.ROUND_FLOOR)
-            .toString(),
-        }, // pay 1/3 with erc20
+          amountOut: sellOrder.erc20TokenAmount.div(4),
+        }, // pay 1/4 with erc20
       ] // SwapExactOutDetails
     );
 
@@ -300,7 +274,7 @@ describe("Test Shoyu ERC721 buy and sell orders with swap", function () {
     const bobERC20BalanceAfter = await this.erc20.balanceOf(this.bob.address);
 
     expect(aliceETHBalanceAfter).to.eq(
-      aliceETHBalanceBefore.add(sellOrder.erc20TokenAmount.toString())
+      aliceETHBalanceBefore.add(sellOrder.erc20TokenAmount)
     );
     expect(aliceERC721BalanceAfter).to.eq("0");
     expect(aliceSUSHIBalanceAfter).to.eq("0");

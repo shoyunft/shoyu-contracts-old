@@ -13,7 +13,6 @@ import "../0x/migrations/LibMigrate.sol";
 import "../0x/vendor/IFeeRecipient.sol";
 import "../0x/vendor/ITakerCallback.sol";
 import "../0x/features/libs/LibSignature.sol";
-import "../0x/features/libs/LibNFTOrder.sol";
 import "../sushiswap/uniswapv2/interfaces/IUniswapV2Router02.sol";
 import "./LibShoyuNFTOrder.sol";
 
@@ -56,7 +55,6 @@ abstract contract ShoyuNFTOrders is
     bool unwrapNativeToken;
     address taker;
     address currentNftOwner;
-    bytes takerCallbackData;
     IERC20TokenV06 outputToken;
     uint256 minAmountOut;
   }
@@ -64,12 +62,11 @@ abstract contract ShoyuNFTOrders is
   struct BuyAndSwapParams {
     uint128 buyAmount;
     uint256 ethAvailable;
-    bytes takerCallbackData;
     LibShoyuNFTOrder.SwapExactOutDetails[] swapDetails;
   }
 
   function _sellAndSwapNFT(
-    LibNFTOrder.NFTOrder memory buyOrder,
+    LibShoyuNFTOrder.NFTOrder memory buyOrder,
     LibSignature.Signature memory signature,
     SellAndSwapParams memory params
   ) internal returns (uint256 erc20FillAmount) {
@@ -79,7 +76,7 @@ abstract contract ShoyuNFTOrders is
       "ShoyuNFTOrders::_sellAndSwapNFT/SAME_TOKEN"
     );
 
-    LibNFTOrder.OrderInfo memory orderInfo = _getOrderInfo(buyOrder);
+    LibShoyuNFTOrder.OrderInfo memory orderInfo = _getOrderInfo(buyOrder);
     // Check that the order can be filled.
     _validateBuyOrder(
       buyOrder,
@@ -151,30 +148,13 @@ abstract contract ShoyuNFTOrders is
       );
     }
 
-    if (params.takerCallbackData.length > 0) {
-      require(
-        params.taker != address(this),
-        "ShoyuNFTOrders::_sellNFT/CANNOT_CALLBACK_SELF"
-      );
-      // Invoke the callback
-      bytes4 callbackResult = ITakerCallback(params.taker).zeroExTakerCallback(
-        orderInfo.orderHash,
-        params.takerCallbackData
-      );
-      // Check for the magic success bytes
-      require(
-        callbackResult == TAKER_CALLBACK_MAGIC_BYTES,
-        "ShoyuNFTOrders::_sellNFT/CALLBACK_FAILED"
-      );
-    }
-
     // Transfer the NFT asset to the buyer.
     // If this function is called from the
     // `onNFTReceived` callback the Exchange Proxy
     // holds the asset. Otherwise, transfer it from
     // the seller.
     _transferNFTAssetFrom(
-      buyOrder.nft,
+      buyOrder.nftToken,
       params.currentNftOwner,
       buyOrder.maker,
       params.tokenId,
@@ -238,11 +218,11 @@ abstract contract ShoyuNFTOrders is
 
   // Core settlement logic for buying an NFT asset.
   function _buyAndSwapNFT(
-    LibNFTOrder.NFTOrder memory sellOrder,
+    LibShoyuNFTOrder.NFTOrder memory sellOrder,
     LibSignature.Signature memory signature,
     BuyAndSwapParams memory params
   ) internal returns (uint256 erc20FillAmount) {
-    LibNFTOrder.OrderInfo memory orderInfo = _getOrderInfo(sellOrder);
+    LibShoyuNFTOrder.OrderInfo memory orderInfo = _getOrderInfo(sellOrder);
     // Check that the order can be filled.
     _validateSellOrder(sellOrder, signature, orderInfo, msg.sender);
 
@@ -270,36 +250,12 @@ abstract contract ShoyuNFTOrders is
 
     // Transfer the NFT asset to the buyer (`msg.sender`).
     _transferNFTAssetFrom(
-      sellOrder.nft,
+      sellOrder.nftToken,
       sellOrder.maker,
       msg.sender,
-      sellOrder.nftId,
+      sellOrder.nftTokenId,
       params.buyAmount
     );
-
-    uint256 ethAvailable = params.ethAvailable;
-    if (params.takerCallbackData.length > 0) {
-      require(
-        msg.sender != address(this),
-        "ShoyuNFTOrders::_buyAndSwapNFT/CANNOT_CALLBACK_SELF"
-      );
-      uint256 ethBalanceBeforeCallback = address(this).balance;
-      // Invoke the callback
-      bytes4 callbackResult = ITakerCallback(msg.sender).zeroExTakerCallback(
-        orderInfo.orderHash,
-        params.takerCallbackData
-      );
-      // Update `ethAvailable` with amount acquired during
-      // the callback
-      ethAvailable = ethAvailable.safeAdd(
-        address(this).balance.safeSub(ethBalanceBeforeCallback)
-      );
-      // Check for the magic success bytes
-      require(
-        callbackResult == TAKER_CALLBACK_MAGIC_BYTES,
-        "ShoyuNFTOrders::_buyAndSwapNFT/CALLBACK_FAILED"
-      );
-    }
 
     require(
       _swapMultipleTokensForETH(params.swapDetails, sellOrder.expiry) ==
@@ -320,14 +276,14 @@ abstract contract ShoyuNFTOrders is
   }
 
   function _validateSellOrder(
-    LibNFTOrder.NFTOrder memory sellOrder,
+    LibShoyuNFTOrder.NFTOrder memory sellOrder,
     LibSignature.Signature memory signature,
-    LibNFTOrder.OrderInfo memory orderInfo,
+    LibShoyuNFTOrder.OrderInfo memory orderInfo,
     address taker
   ) internal view {
     // Order must be selling the NFT asset.
     require(
-      sellOrder.direction == LibNFTOrder.TradeDirection.SELL_NFT,
+      sellOrder.direction == LibShoyuNFTOrder.TradeDirection.SELL_NFT,
       "ShoyuNFTOrders::_validateSellOrder/WRONG_TRADE_DIRECTION"
     );
     // Sell order must be fillable with NATIVE_TOKEN
@@ -341,7 +297,7 @@ abstract contract ShoyuNFTOrders is
     }
     // Check that the order is valid and has not expired, been cancelled,
     // or been filled.
-    if (orderInfo.status != LibNFTOrder.OrderStatus.FILLABLE) {
+    if (orderInfo.status != LibShoyuNFTOrder.OrderStatus.FILLABLE) {
       LibNFTOrdersRichErrors
         .OrderNotFillableError(
           sellOrder.maker,
@@ -356,15 +312,15 @@ abstract contract ShoyuNFTOrders is
   }
 
   function _validateBuyOrder(
-    LibNFTOrder.NFTOrder memory buyOrder,
+    LibShoyuNFTOrder.NFTOrder memory buyOrder,
     LibSignature.Signature memory signature,
-    LibNFTOrder.OrderInfo memory orderInfo,
+    LibShoyuNFTOrder.OrderInfo memory orderInfo,
     address taker,
     uint256 tokenId
   ) internal view {
     // Order must be buying the NFT asset.
     require(
-      buyOrder.direction == LibNFTOrder.TradeDirection.BUY_NFT,
+      buyOrder.direction == LibShoyuNFTOrder.TradeDirection.BUY_NFT,
       "ShoyuNFTOrders::_validateBuyOrder/WRONG_TRADE_DIRECTION"
     );
     // The ERC20 token cannot be ETH.
@@ -378,7 +334,7 @@ abstract contract ShoyuNFTOrders is
     }
     // Check that the order is valid and has not expired, been cancelled,
     // or been filled.
-    if (orderInfo.status != LibNFTOrder.OrderStatus.FILLABLE) {
+    if (orderInfo.status != LibShoyuNFTOrder.OrderStatus.FILLABLE) {
       LibNFTOrdersRichErrors
         .OrderNotFillableError(
           buyOrder.maker,
@@ -395,7 +351,7 @@ abstract contract ShoyuNFTOrders is
   }
 
   function _payEthFees(
-    LibNFTOrder.NFTOrder memory order,
+    LibShoyuNFTOrder.NFTOrder memory order,
     uint128 fillAmount,
     uint128 orderAmount,
     uint256 ethSpent,
@@ -417,7 +373,7 @@ abstract contract ShoyuNFTOrders is
   }
 
   function _payFees(
-    LibNFTOrder.NFTOrder memory order,
+    LibShoyuNFTOrder.NFTOrder memory order,
     address payer,
     uint128 fillAmount,
     uint128 orderAmount,
@@ -433,7 +389,7 @@ abstract contract ShoyuNFTOrders is
     }
 
     for (uint256 i = 0; i < order.fees.length; i++) {
-      LibNFTOrder.Fee memory fee = order.fees[i];
+      LibShoyuNFTOrder.Fee memory fee = order.fees[i];
 
       require(
         fee.recipient != address(this),
@@ -500,27 +456,27 @@ abstract contract ShoyuNFTOrders is
   /// @param order The NFT order.
   /// @param tokenId The ID of the NFT asset.
   function _validateOrderProperties(
-    LibNFTOrder.NFTOrder memory order,
+    LibShoyuNFTOrder.NFTOrder memory order,
     uint256 tokenId
   ) internal view {
     // Order must be buying an NFT asset to have properties.
     require(
-      order.direction == LibNFTOrder.TradeDirection.BUY_NFT,
+      order.direction == LibShoyuNFTOrder.TradeDirection.BUY_NFT,
       "ShoyuNFTOrders::_validateOrderProperties/WRONG_TRADE_DIRECTION"
     );
 
     // If no properties are specified, check that the given
     // `tokenId` matches the one specified in the order.
-    if (order.nftProperties.length == 0) {
-      if (tokenId != order.nftId) {
+    if (order.nftTokenProperties.length == 0) {
+      if (tokenId != order.nftTokenId) {
         LibNFTOrdersRichErrors
-          .TokenIdMismatchError(tokenId, order.nftId)
+          .TokenIdMismatchError(tokenId, order.nftTokenId)
           .rrevert();
       }
     } else {
       // Validate each property
-      for (uint256 i = 0; i < order.nftProperties.length; i++) {
-        LibNFTOrder.Property memory property = order.nftProperties[i];
+      for (uint256 i = 0; i < order.nftTokenProperties.length; i++) {
+        LibShoyuNFTOrder.Property memory property = order.nftTokenProperties[i];
         // `address(0)` is interpreted as a no-op. Any token ID
         // will satisfy a property with `propertyValidator == address(0)`.
         if (address(property.propertyValidator) == address(0)) {
@@ -531,7 +487,7 @@ abstract contract ShoyuNFTOrders is
         // if the call reverts.
         try
           property.propertyValidator.validateProperty(
-            order.nft,
+            order.nftToken,
             tokenId,
             property.propertyData
           )
@@ -539,7 +495,7 @@ abstract contract ShoyuNFTOrders is
           LibNFTOrdersRichErrors
             .PropertyValidationFailedError(
               address(property.propertyValidator),
-              order.nft,
+              order.nftToken,
               tokenId,
               property.propertyData,
               errorData
@@ -584,7 +540,7 @@ abstract contract ShoyuNFTOrders is
   /// @param fillAmount The amount (denominated in the NFT asset)
   ///        that the order has been filled by.
   function _updateOrderState(
-    LibNFTOrder.NFTOrder memory order,
+    LibShoyuNFTOrder.NFTOrder memory order,
     bytes32 orderHash,
     uint128 fillAmount
   ) internal virtual;
@@ -592,9 +548,9 @@ abstract contract ShoyuNFTOrders is
   /// @dev Get the order info for an NFT order.
   /// @param order The NFT order.
   /// @return orderInfo Info about the order.
-  function _getOrderInfo(LibNFTOrder.NFTOrder memory order)
+  function _getOrderInfo(LibShoyuNFTOrder.NFTOrder memory order)
     internal
     view
     virtual
-    returns (LibNFTOrder.OrderInfo memory orderInfo);
+    returns (LibShoyuNFTOrder.OrderInfo memory orderInfo);
 }
