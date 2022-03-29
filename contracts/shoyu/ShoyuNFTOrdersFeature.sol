@@ -161,7 +161,10 @@ contract ShoyuNFTOrdersFeature is
     _buyNFT(
       sellOrder,
       signature,
-      BuyParams(nftBuyAmount, msg.value)
+      BuyParams(
+        nftBuyAmount,
+        address(this).balance.safeSub(ethBalanceBefore) // Remaining ETH available
+      )
     );
 
     uint256 ethBalanceAfter = address(this).balance;
@@ -215,7 +218,7 @@ contract ShoyuNFTOrdersFeature is
           signatures[i],
           BuyParams(
             nftBuyAmounts[i],
-            address(this).balance.safeSub(ethBalanceBefore) // Remaining ETH available)
+            address(this).balance.safeSub(ethBalanceBefore) // Remaining ETH available
           )
         );
       }
@@ -404,13 +407,13 @@ contract ShoyuNFTOrdersFeature is
 
     _transferEth(payable(sellOrder.maker), erc20FillAmount);
 
-    // The buyer pays fees using ETH.
-    _payFees(
-      sellOrder,
-      msg.sender,
-      params.buyAmount,
-      orderInfo.orderAmount,
-      false
+    // Fees are paid from the EP's current balance of ETH.
+    _payEthFees(
+        sellOrder,
+        params.buyAmount,
+        orderInfo.orderAmount,
+        erc20FillAmount,
+        params.ethAvailable
     );
 
     emit NFTOrderFilled(
