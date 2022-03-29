@@ -11,43 +11,44 @@ import { seedSushiswapPools } from "./fixtures/seedSushiswapPools";
 
 use(solidity);
 
-describe("Test ShoyuNFTOrders buy and sell orders with swap", function () {
-  before(async function () {
-    this.signers = await ethers.getSigners();
-    this.deployer = this.signers[0];
-    this.dev = this.signers[1];
-    this.alice = this.signers[2];
-    this.bob = this.signers[3];
+before(async function () {
+  this.signers = await ethers.getSigners();
+  this.deployer = this.signers[0];
+  this.dev = this.signers[1];
+  this.alice = this.signers[2];
+  this.bob = this.signers[3];
 
-    /* contract factories */
-    this.ERC20Mock = await ethers.getContractFactory(
-      "ERC20Mock",
-      this.deployer
-    );
-    this.ERC721Mock = await ethers.getContractFactory(
-      "TestMintableERC721Token"
-    );
+  /* contract factories */
+  this.ERC20Mock = await ethers.getContractFactory("ERC20Mock", this.deployer);
+  this.ERC721Mock = await ethers.getContractFactory("TestMintableERC721Token");
+  this.ERC1155Mock = await ethers.getContractFactory(
+    "TestMintableERC1155Token"
+  );
 
-    /* mock token deployments */
-    this.sushi = await this.ERC20Mock.deploy("SUSHI", "SUSHI", "100000000");
-    await this.sushi.deployed();
+  /* mock token deployments */
+  this.sushi = await this.ERC20Mock.deploy("SUSHI", "SUSHI", "100000000");
+  await this.sushi.deployed();
 
-    this.erc20 = await this.ERC20Mock.deploy("TOKEN", "TOKEN", "100000000");
-    await this.erc20.deployed();
+  this.erc20 = await this.ERC20Mock.deploy("TOKEN", "TOKEN", "100000000");
+  await this.erc20.deployed();
 
-    this.erc721 = await this.ERC721Mock.deploy();
-    await this.erc721.deployed();
+  this.erc721 = await this.ERC721Mock.deploy();
+  await this.erc721.deployed();
 
-    /* get deployed contracts */
-    await deployments.fixture(["ShoyuNFTOrdersFeature"]);
-    this.sushiswapFactory = await ethers.getContract("UniswapV2Factory");
-    this.sushiswapRouter = await ethers.getContract("UniswapV2Router02");
-    this.zeroEx = await ethers.getContract("ZeroEx");
-    this.weth = await ethers.getContract("WETH9Mock");
+  this.erc1155 = await this.ERC1155Mock.deploy();
+  await this.erc1155.deployed();
 
-    this.shoyuEx = await ethers.getContractAt("IShoyuEx", this.zeroEx.address);
-  });
+  /* get deployed contracts */
+  await deployments.fixture(["ShoyuNFTOrdersFeature"]);
+  this.sushiswapFactory = await ethers.getContract("UniswapV2Factory");
+  this.sushiswapRouter = await ethers.getContract("UniswapV2Router02");
+  this.zeroEx = await ethers.getContract("ZeroEx");
+  this.weth = await ethers.getContract("WETH9Mock");
 
+  this.shoyuEx = await ethers.getContractAt("IShoyuEx", this.zeroEx.address);
+});
+
+describe("Test buy orders with swaps", function () {
   beforeEach(async function () {
     await seedSushiswapPools({
       pairs: [
@@ -67,11 +68,11 @@ describe("Test ShoyuNFTOrders buy and sell orders with swap", function () {
     });
   });
 
-  it("NFT owner can fill buy order and swap to desired currency", async function () {
+  it("Owner can sell ERC721 and swap to different ERC20", async function () {
     await this.weth.connect(this.alice).deposit({ value: "50000" });
     await this.erc721.mint(this.bob.address, "420");
 
-    /* alice creates a buy order for bob's nft with weth */
+    /* alice creates a buy order for bob's ERC7221 with weth */
     await this.weth.connect(this.alice).approve(this.shoyuEx.address, "50000");
     const buyOrder = new NFTOrder({
       chainId: 31337,
@@ -105,7 +106,9 @@ describe("Test ShoyuNFTOrders buy and sell orders with swap", function () {
     const buyOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 };
 
     /* bob fills buy order with swap to sushi */
-    await this.erc721.connect(this.bob).approve(this.shoyuEx.address, "420");
+    await this.erc721
+      .connect(this.bob)
+      .approve(this.shoyuEx.address, buyOrder.nftTokenId);
     const tx = await this.shoyuEx.connect(this.bob).sellAndSwapNFT(
       buyOrder, // LibNFTOrder
       buyOrderSignature, // LibSignature
@@ -126,6 +129,96 @@ describe("Test ShoyuNFTOrders buy and sell orders with swap", function () {
     expect(bobWETHBalance).to.lt(50000);
     expect(bobSUSHIBalance).to.gt(0);
     expect(bobERC721Balance).to.eq(0);
+  });
+
+  it("NFT can sell ERC1155 and swap to different ERC20", async function () {
+    await this.weth.connect(this.alice).deposit({ value: "50000" });
+    await this.erc1155.mint(this.bob.address, "420", "1");
+
+    /* alice creates a buy order for bob's ERC7221 with weth */
+    await this.weth.connect(this.alice).approve(this.shoyuEx.address, "50000");
+    const buyOrder = new NFTOrder({
+      chainId: 31337,
+      verifyingContract: this.shoyuEx.address,
+      direction: TradeDirection.BuyNFT,
+      erc20Token: this.weth.address,
+      erc20TokenAmount: BigNumber.from(5000),
+      nftStandard: NFTStandard.ERC1155,
+      nftToken: this.erc1155.address,
+      nftTokenId: BigNumber.from(420),
+      nftTokenAmount: BigNumber.from(1),
+      maker: this.alice.address,
+      taker: AddressZero,
+      nonce: BigNumber.from(69),
+      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
+    });
+
+    const { domain, message } = buyOrder.getEIP712TypedData();
+    const types = {
+      [NFTOrder.STRUCT_NAME]: NFTOrder.STRUCT_ABI,
+      ["Fee"]: NFTOrder.FEE_ABI,
+      ["Property"]: NFTOrder.PROPERTY_ABI,
+    };
+
+    const rawSignature = await this.alice._signTypedData(
+      domain,
+      types,
+      message
+    );
+    const { v, r, s } = ethers.utils.splitSignature(rawSignature);
+    const buyOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 };
+
+    /* bob fills buy order with swap to sushi */
+    await this.erc1155
+      .connect(this.bob)
+      .setApprovalForAll(this.shoyuEx.address, true);
+    const tx = await this.shoyuEx.connect(this.bob).sellAndSwapNFT(
+      buyOrder, // LibNFTOrder
+      buyOrderSignature, // LibSignature
+      buyOrder.nftTokenId, // tokenId
+      false, // unwrap
+      this.sushi.address, // outputToken
+      0 // minAmountOut
+    );
+
+    const aliceWETHBalance = await this.weth.balanceOf(this.alice.address);
+    const aliceERC1155Balance = await this.erc1155.balanceOf(
+      this.alice.address,
+      buyOrder.nftTokenId
+    );
+    const bobWETHBalance = await this.weth.balanceOf(this.bob.address);
+    const bobERC1155Balance = await this.erc1155.balanceOf(
+      this.bob.address,
+      buyOrder.nftTokenId
+    );
+    const bobSUSHIBalance = await this.sushi.balanceOf(this.bob.address);
+
+    expect(aliceWETHBalance).to.gt(0);
+    expect(aliceERC1155Balance).to.eq(1);
+    expect(bobWETHBalance).to.lt(50000);
+    expect(bobSUSHIBalance).to.gt(0);
+    expect(bobERC1155Balance).to.eq(0);
+  });
+});
+
+describe("Test ShoyuNFT sell orders with swap", function () {
+  beforeEach(async function () {
+    await seedSushiswapPools({
+      pairs: [
+        {
+          token0: this.weth,
+          token0Amount: "50000",
+          token1: this.sushi,
+          token1Amount: "100000",
+        },
+        {
+          token0: this.weth,
+          token0Amount: "100000",
+          token1: this.erc20,
+          token1Amount: "50000",
+        },
+      ],
+    });
   });
 
   it("Buyer can swap and fill sell order and pay with any currency", async function () {

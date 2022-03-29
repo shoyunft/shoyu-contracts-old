@@ -123,10 +123,17 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 999999,
+            runs: 1000000,
+            details: {
+              yul: false,
+              deduplicate: true,
+              cse: true,
+              constantOptimizer: true,
+            },
+          },
         },
-      }
-    }]
+      },
+    ],
   },
   tenderly: {
     project: String(process.env.TENDERLY_PROJECT),

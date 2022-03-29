@@ -3,8 +3,6 @@ pragma experimental ABIEncoderV2;
 
 import "@0x/contracts-erc20/contracts/src/v06/IEtherTokenV06.sol";
 import "@0x/contracts-utils/contracts/src/v06/LibSafeMathV06.sol";
-import "../0x/fixins/FixinERC721Spender.sol";
-import "../0x/fixins/FixinERC1155Spender.sol";
 import "../0x/migrations/LibMigrate.sol";
 import "../0x/features/interfaces/IFeature.sol";
 import "../0x/features/libs/LibSignature.sol";
@@ -18,8 +16,6 @@ import "./LibShoyuNFTOrdersStorage.sol";
 contract ShoyuNFTOrdersFeature is
   IFeature,
   IShoyuNFTOrdersFeature,
-  FixinERC721Spender,
-  FixinERC1155Spender,
   ShoyuNFTOrders
 {
   using LibSafeMathV06 for uint256;
@@ -165,24 +161,6 @@ contract ShoyuNFTOrdersFeature is
         LibNFTOrdersRichErrors.InvalidSignerError(maker, signer).rrevert();
       }
     }
-  }
-
-  /// @dev Transfers an NFT asset.
-  /// @param token The address of the NFT contract.
-  /// @param from The address currently holding the asset.
-  /// @param to The address to transfer the asset to.
-  /// @param tokenId The ID of the asset to transfer.
-  /// @param amount The amount of the asset to transfer. Always
-  ///        1 for ERC721 assets.
-  function _transferNFTAssetFrom(
-    address token,
-    address from,
-    address to,
-    uint256 tokenId,
-    uint256 amount
-  ) internal override {
-    assert(amount == 1);
-    _transferERC721AssetFrom(IERC721Token(token), from, to, tokenId);
   }
 
   /// @dev Updates storage to indicate that the given order

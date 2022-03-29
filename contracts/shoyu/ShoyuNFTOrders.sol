@@ -9,6 +9,8 @@ import "../0x/errors/LibNFTOrdersRichErrors.sol";
 import "../0x/fixins/FixinCommon.sol";
 import "../0x/fixins/FixinEIP712.sol";
 import "../0x/fixins/FixinTokenSpender.sol";
+import "../0x/fixins/FixinERC721Spender.sol";
+import "../0x/fixins/FixinERC1155Spender.sol";
 import "../0x/migrations/LibMigrate.sol";
 import "../0x/vendor/IFeeRecipient.sol";
 import "../0x/vendor/ITakerCallback.sol";
@@ -20,7 +22,9 @@ import "./LibShoyuNFTOrder.sol";
 abstract contract ShoyuNFTOrders is
   FixinCommon,
   FixinEIP712,
-  FixinTokenSpender
+  FixinTokenSpender,
+  FixinERC721Spender,
+  FixinERC1155Spender
 {
   using LibSafeMathV06 for uint256;
 
@@ -154,6 +158,7 @@ abstract contract ShoyuNFTOrders is
     // holds the asset. Otherwise, transfer it from
     // the seller.
     _transferNFTAssetFrom(
+      buyOrder.nftStandard,
       buyOrder.nftToken,
       params.currentNftOwner,
       buyOrder.maker,
@@ -250,6 +255,7 @@ abstract contract ShoyuNFTOrders is
 
     // Transfer the NFT asset to the buyer (`msg.sender`).
     _transferNFTAssetFrom(
+      sellOrder.nftStandard,
       sellOrder.nftToken,
       sellOrder.maker,
       msg.sender,
@@ -506,6 +512,29 @@ abstract contract ShoyuNFTOrders is
     }
   }
 
+  /// @dev Transfers an NFT asset.
+  /// @param token The address of the NFT contract.
+  /// @param from The address currently holding the asset.
+  /// @param to The address to transfer the asset to.
+  /// @param tokenId The ID of the asset to transfer.
+  /// @param amount The amount of the asset to transfer. Always
+  ///        1 for ERC721 assets.
+  function _transferNFTAssetFrom(
+    LibShoyuNFTOrder.NFTStandard nftStandard,
+    address token,
+    address from,
+    address to,
+    uint256 tokenId,
+    uint256 amount
+  ) internal {
+    if (nftStandard == LibShoyuNFTOrder.NFTStandard.ERC721) {
+      assert (amount == 1);
+      _transferERC721AssetFrom(IERC721Token(token), from, to, tokenId);
+    } else {
+      _transferERC1155AssetFrom(IERC1155Token(token), from, to, tokenId, amount);
+    }
+  }
+
   /// @dev Validates that the given signature is valid for the
   ///      given maker and order hash. Reverts if the signature
   ///      is not valid.
@@ -517,21 +546,6 @@ abstract contract ShoyuNFTOrders is
     LibSignature.Signature memory signature,
     address maker
   ) internal view virtual;
-
-  /// @dev Transfers an NFT asset.
-  /// @param token The address of the NFT contract.
-  /// @param from The address currently holding the asset.
-  /// @param to The address to transfer the asset to.
-  /// @param tokenId The ID of the asset to transfer.
-  /// @param amount The amount of the asset to transfer. Always
-  ///        1 for ERC721 assets.
-  function _transferNFTAssetFrom(
-    address token,
-    address from,
-    address to,
-    uint256 tokenId,
-    uint256 amount
-  ) internal virtual;
 
   /// @dev Updates storage to indicate that the given order
   ///      has been filled by the given amount.
