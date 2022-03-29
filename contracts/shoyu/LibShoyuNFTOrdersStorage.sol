@@ -3,6 +3,8 @@ pragma experimental ABIEncoderV2;
 
 import "../0x/storage/LibStorage.sol";
 
+// TODO: is there a better storage solution?
+
 /// @dev Storage helpers for `ShoyuNFTOrdersFeature`.
 library LibShoyuNFTOrdersStorage {
   struct OrderState {

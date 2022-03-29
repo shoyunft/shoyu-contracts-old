@@ -135,7 +135,7 @@ library LibShoyuNFTOrder {
   /// @return structHash The struct hash of the order.
   function getNFTOrderStructHash(NFTOrder memory order)
     internal
-    view
+    pure
     returns (bytes32 structHash)
   {
     bytes32 propertiesHash = _propertiesHash(order.nftTokenProperties);

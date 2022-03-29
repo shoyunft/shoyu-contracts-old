@@ -76,10 +76,9 @@ contract ShoyuNFTOrdersFeature is
     uint256 minAmountOut;
   }
 
-  struct BuyAndSwapParams {
+  struct BuyParams {
     uint128 buyAmount;
     uint256 ethAvailable;
-    LibShoyuNFTOrder.SwapExactOutDetails[] swapDetails;
   }
 
   /// @dev Initialize and register this feature.
@@ -89,6 +88,10 @@ contract ShoyuNFTOrdersFeature is
     _registerFeatureFunction(this.sellAndSwapNFT.selector);
     _registerFeatureFunction(this.buyAndSwapNFT.selector);
     _registerFeatureFunction(this.buyAndSwapNFTs.selector);
+    _registerFeatureFunction(this.validateNFTOrderSignature.selector);
+    _registerFeatureFunction(this.validateNFTOrderProperties.selector);
+    _registerFeatureFunction(this.getNFTOrderInfo.selector);
+    _registerFeatureFunction(this.getNFTOrderHash.selector);
     return LibMigrate.MIGRATE_SUCCESS;
   }
 
@@ -152,22 +155,13 @@ contract ShoyuNFTOrdersFeature is
     LibShoyuNFTOrder.SwapExactOutDetails[] memory swapDetails
   ) public payable override {
     uint256 ethBalanceBefore = address(this).balance.safeSub(msg.value);
-    _buyAndSwapNFT(
+
+    _swapMultipleTokensForETH(swapDetails, block.timestamp);
+
+    _buyNFT(
       sellOrder,
       signature,
-      BuyAndSwapParams(nftBuyAmount, msg.value, swapDetails)
-    );
-
-    emit NFTOrderFilled(
-      sellOrder.direction,
-      sellOrder.maker,
-      msg.sender,
-      sellOrder.nonce,
-      sellOrder.erc20Token,
-      sellOrder.erc20TokenAmount,
-      sellOrder.nftToken,
-      sellOrder.nftTokenId,
-      nftBuyAmount
+      BuyParams(nftBuyAmount, msg.value)
     );
 
     uint256 ethBalanceAfter = address(this).balance;
@@ -180,6 +174,80 @@ contract ShoyuNFTOrdersFeature is
         )
         .rrevert();
     }
+    // Refund
+    _transferEth(msg.sender, ethBalanceAfter - ethBalanceBefore);
+  }
+
+  /// @dev Buys NFT assets by filling the given orders.
+  /// @param sellOrders The NFT sell orders.
+  /// @param signatures The order signatures.
+  /// @param nftBuyAmounts The amount of the NFT asset to buy.
+  /// @param swapDetails The swap details required to fill the orders.
+  /// @param revertIfIncomplete If true, reverts if this
+  ///        function fails to fill any individual order.
+  /// @return successes An array of booleans corresponding to whether
+  ///         each order in `orders` was successfully filled.
+  function buyAndSwapNFTs(
+    LibShoyuNFTOrder.NFTOrder[] memory sellOrders,
+    LibSignature.Signature[] memory signatures,
+    uint128[] memory nftBuyAmounts,
+    LibShoyuNFTOrder.SwapExactOutDetails[] memory swapDetails,
+    bool revertIfIncomplete
+  ) public payable override returns (bool[] memory successes) {
+    require(
+      sellOrders.length == signatures.length &&
+      sellOrders.length == nftBuyAmounts.length,
+      "ShoyuNFTOrdersFeature::buyAndSwapNFTs/ARRAY_LENGTH_MISMATCH"
+    );
+    successes = new bool[](sellOrders.length);
+
+    uint256 ethBalanceBefore = address(this).balance.safeSub(msg.value);
+
+    if (swapDetails.length > 0) {
+      _swapMultipleTokensForETH(swapDetails, block.timestamp);
+    }
+
+    if (revertIfIncomplete) {
+      for (uint256 i = 0; i < sellOrders.length; i++) {
+        // Will revert if _buyNFT reverts.
+        _buyNFT(
+          sellOrders[i],
+          signatures[i],
+          BuyParams(
+            nftBuyAmounts[i],
+            address(this).balance.safeSub(ethBalanceBefore) // Remaining ETH available)
+          )
+        );
+      }
+    } else {
+      for (uint256 i = 0; i < sellOrders.length; i++) {
+        // Delegatecall `_buyERC1155` to catch swallow reverts while
+        // preserving execution context.
+        // Note that `_buyERC1155` is a public function but should _not_
+        // be registered in the Exchange Proxy.
+        (successes[i], ) = _implementation.delegatecall(
+          abi.encodeWithSelector(
+            this._buyNFT.selector,
+            sellOrders[i],
+            signatures[i],
+            BuyParams(
+              nftBuyAmounts[i],
+              address(this).balance.safeSub(ethBalanceBefore) // Remaining ETH available
+            )
+          )
+        );
+      }
+    }
+    
+    // Cannot use pre-existing ETH balance
+    uint256 ethBalanceAfter = address(this).balance;
+    if (ethBalanceAfter < ethBalanceBefore) {
+        LibNFTOrdersRichErrors.OverspentEthError(
+            msg.value + (ethBalanceBefore - ethBalanceAfter),
+            msg.value
+        ).rrevert();
+    }
+
     // Refund
     _transferEth(msg.sender, ethBalanceAfter - ethBalanceBefore);
   }
@@ -239,6 +307,7 @@ contract ShoyuNFTOrdersFeature is
       erc20FillAmount
     );
 
+    // TODO: is there some way to avoid this approval?
     buyOrder.erc20Token.approve(address(SushiswapRouter), erc20FillAmount);
     address[] memory path = new address[](2);
     path[0] = address(buyOrder.erc20Token);
@@ -292,11 +361,11 @@ contract ShoyuNFTOrdersFeature is
   }
 
   // Core settlement logic for buying an NFT asset.
-  function _buyAndSwapNFT(
+  function _buyNFT(
     LibShoyuNFTOrder.NFTOrder memory sellOrder,
     LibSignature.Signature memory signature,
-    BuyAndSwapParams memory params
-  ) internal returns (uint256 erc20FillAmount) {
+    BuyParams memory params
+  ) public payable returns (uint256 erc20FillAmount) {
     LibShoyuNFTOrder.OrderInfo memory orderInfo = _getOrderInfo(sellOrder);
     // Check that the order can be filled.
     _validateSellOrder(sellOrder, signature, orderInfo, msg.sender);
@@ -333,21 +402,27 @@ contract ShoyuNFTOrdersFeature is
       params.buyAmount
     );
 
-    require(
-      _swapMultipleTokensForETH(params.swapDetails, sellOrder.expiry) ==
-        erc20FillAmount,
-      "ShoyuNFTOrders::_buyAndSwapNFT/INVALID_SWAP_PARAMS"
-    );
-
     _transferEth(payable(sellOrder.maker), erc20FillAmount);
 
     // The buyer pays fees using ETH.
     _payFees(
-        sellOrder,
-        msg.sender,
-        params.buyAmount,
-        orderInfo.orderAmount,
-        false
+      sellOrder,
+      msg.sender,
+      params.buyAmount,
+      orderInfo.orderAmount,
+      false
+    );
+
+    emit NFTOrderFilled(
+      sellOrder.direction,
+      sellOrder.maker,
+      msg.sender,
+      sellOrder.nonce,
+      sellOrder.erc20Token,
+      sellOrder.erc20TokenAmount,
+      sellOrder.nftToken,
+      sellOrder.nftTokenId,
+      params.buyAmount
     );
   }
 
@@ -365,7 +440,7 @@ contract ShoyuNFTOrdersFeature is
 
       require(
         amounts[0] <= swapDetails[i].maxAmountIn,
-        "ShoyuNFTOrders::_buyAndSwapNFT/INSUFFICIENT_FUNDS"
+        "ShoyuNFTOrders::_swapMultipleTokensForETH/INSUFFICIENT_FUNDS"
       );
 
       // Transfer the ERC20 from the maker to the Exchange Proxy
@@ -379,6 +454,7 @@ contract ShoyuNFTOrdersFeature is
         amounts[0]
       );
 
+      // TODO: is there some way to avoid this approval?
       IERC20TokenV06(swapDetails[i].path[0]).approve(
         address(SushiswapRouter),
         amounts[0]
@@ -394,6 +470,22 @@ contract ShoyuNFTOrdersFeature is
 
       amountOut = amountOut.safeAdd(amounts[amounts.length - 1]);
     }
+  }
+
+  /// @dev Checks whether the given signature is valid for the
+  ///      the given NFT order. Reverts if not.
+  /// @param order The NFT order.
+  /// @param signature The signature to validate.
+  function validateNFTOrderSignature(
+    LibShoyuNFTOrder.NFTOrder memory order,
+    LibSignature.Signature memory signature
+  )
+    public
+    override
+    view
+  {
+    bytes32 orderHash = getNFTOrderHash(order);
+    _validateOrderSignature(orderHash, signature, order.maker);
   }
 
   /// @dev Validates that the given signature is valid for the
@@ -703,6 +795,22 @@ contract ShoyuNFTOrdersFeature is
       // Sum the fees paid
       totalFeesPaid = totalFeesPaid.safeAdd(feeFillAmount);
     }
+  }
+
+  /// @dev If the given order is buying an NFT asset, checks
+  ///      whether or not the given token ID satisfies the required
+  ///      properties specified in the order. If the order does not
+  ///      specify any properties, this function instead checks
+  ///      whether the given token ID matches the ID in the order.
+  ///      Reverts if any checks fail, or if the order is selling
+  ///      an NFT asset.
+  /// @param order The NFT order.
+  /// @param nftTokenId The ID of the NFT asset.
+  function validateNFTOrderProperties(
+    LibShoyuNFTOrder.NFTOrder memory order,
+    uint256 nftTokenId
+  ) public override view {
+    _validateOrderProperties(order, nftTokenId);
   }
 
   /// @dev If the given order is buying an NFT asset, checks

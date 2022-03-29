@@ -40,6 +40,75 @@ interface IShoyuNFTOrdersFeature {
     LibShoyuNFTOrder.SwapExactOutDetails[] memory swapDetails
   ) external payable;
 
+  /// @dev Buys NFT assets by filling the given orders.
+  /// @param sellOrders The NFT sell orders.
+  /// @param signatures The order signatures.
+  /// @param nftBuyAmounts The amount of the NFT assets to buy.
+  /// @param swapDetails The swap details required to fill the orders.
+  function buyAndSwapNFTs(
+    LibShoyuNFTOrder.NFTOrder[] calldata sellOrders,
+    LibSignature.Signature[] calldata signatures,
+    uint128[] memory nftBuyAmounts,
+    LibShoyuNFTOrder.SwapExactOutDetails[] memory swapDetails,
+    bool revertIfIncomplete
+  ) external payable returns (bool[] memory successes);
+
+  /// @dev Buys NFT assets by filling the given orders with ETH.
+  /// @param sellOrders The NFT sell orders.
+  /// @param signatures The order signatures.
+  /// @param nftBuyAmounts The amount of the NFT assets to buy.
+  // function buyNFTs(
+  //   LibShoyuNFTOrder.NFTOrder[] calldata sellOrders,
+  //   LibSignature.Signature[] calldata signatures,
+  //   uint128[] memory nftBuyAmounts,
+  //   LibShoyuNFTOrder.SwapExactOutDetails[] memory swapDetails
+  // ) external payable returns (bool[] memory successes);
+
+  /// @dev Approves an NFT order on-chain. After pre-signing
+  ///      the order, the `PRESIGNED` signature type will become
+  ///      valid for that order and signer.
+  /// @param order An NFT order.
+  // function preSignNFTOrder(LibShoyuNFTOrder.NFTOrder calldata order) external;
+
+  /// @dev Checks whether the given signature is valid for the
+  ///      the given NFT order. Reverts if not.
+  /// @param order The NFT order.
+  /// @param signature The signature to validate.
+  function validateNFTOrderSignature(
+    LibShoyuNFTOrder.NFTOrder calldata order,
+    LibSignature.Signature calldata signature
+  ) external view;
+
+  /// @dev If the given order is buying an NFT asset, checks
+  ///      whether or not the given token ID satisfies the required
+  ///      properties specified in the order. If the order does not
+  ///      specify any properties, this function instead checks
+  ///      whether the given token ID matches the ID in the order.
+  ///      Reverts if any checks fail, or if the order is selling
+  ///      an NFT asset.
+  /// @param order The NFT order.
+  /// @param nftTokenId The ID of the NFT asset.
+  function validateNFTOrderProperties(
+    LibShoyuNFTOrder.NFTOrder calldata order,
+    uint256 nftTokenId
+  ) external view;
+
+  /// @dev Get the order info for an NFT order.
+  /// @param order The NFT order.
+  /// @return orderInfo Infor about the order.
+  function getNFTOrderInfo(LibShoyuNFTOrder.NFTOrder calldata order)
+    external
+    view
+    returns (LibShoyuNFTOrder.OrderInfo memory orderInfo);
+
+  /// @dev Get the EIP-712 hash of an NFT order.
+  /// @param order The NFT order.
+  /// @return orderHash The order hash.
+  function getNFTOrderHash(LibShoyuNFTOrder.NFTOrder calldata order)
+    external
+    view
+    returns (bytes32 orderHash);
+
   /// @dev Emitted whenever an `NFTOrder` is filled.
   /// @param direction Whether the order is selling or
   ///        buying the NFT token.
@@ -63,49 +132,4 @@ interface IShoyuNFTOrdersFeature {
     uint256 nftTokenId,
     uint128 nftTokenAmount
   );
-
-  /// @dev Approves an NFT order on-chain. After pre-signing
-  ///      the order, the `PRESIGNED` signature type will become
-  ///      valid for that order and signer.
-  /// @param order An NFT order.
-  // function preSignNFTOrder(LibShoyuNFTOrder.NFTOrder calldata order) external;
-
-  /// @dev Checks whether the given signature is valid for the
-  ///      the given NFT order. Reverts if not.
-  /// @param order The NFT order.
-  /// @param signature The signature to validate.
-  // function validateNFTOrderSignature(
-  //   LibShoyuNFTOrder.NFTOrder calldata order,
-  //   LibSignature.Signature calldata signature
-  // ) external view;
-
-  /// @dev If the given order is buying an NFT asset, checks
-  ///      whether or not the given token ID satisfies the required
-  ///      properties specified in the order. If the order does not
-  ///      specify any properties, this function instead checks
-  ///      whether the given token ID matches the ID in the order.
-  ///      Reverts if any checks fail, or if the order is selling
-  ///      an NFT asset.
-  /// @param order The NFT order.
-  /// @param nftTokenId The ID of the NFT asset.
-  // function validateNFTOrderProperties(
-  //   LibShoyuNFTOrder.NFTOrder calldata order,
-  //   uint256 nftTokenId
-  // ) external view;
-
-  /// @dev Get the order info for an NFT order.
-  /// @param order The NFT order.
-  /// @return orderInfo Infor about the order.
-  function getNFTOrderInfo(LibShoyuNFTOrder.NFTOrder calldata order)
-    external
-    view
-    returns (LibShoyuNFTOrder.OrderInfo memory orderInfo);
-
-  /// @dev Get the EIP-712 hash of an NFT order.
-  /// @param order The NFT order.
-  /// @return orderHash The order hash.
-  function getNFTOrderHash(LibShoyuNFTOrder.NFTOrder calldata order)
-    external
-    view
-    returns (bytes32 orderHash);
 }
