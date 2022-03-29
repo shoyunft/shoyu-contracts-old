@@ -3,7 +3,7 @@
       "dbaeumer.vscode-eslint",
       "esbenp.prettier-vscode",
       "hbenl.vscode-mocha-test-adapter",
-      "juanblanco.solidity",
+      "nomicfoundation.hardhat-solidity",
       "tintinweb.solidity-visual-auditor"
     ]
   }
