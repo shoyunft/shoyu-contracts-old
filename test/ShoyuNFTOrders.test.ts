@@ -90,20 +90,7 @@ describe("Test buy orders with swaps", function () {
       expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
-    const { domain, message } = buyOrder.getEIP712TypedData();
-    const types = {
-      [NFTOrder.STRUCT_NAME]: NFTOrder.STRUCT_ABI,
-      ["Fee"]: NFTOrder.FEE_ABI,
-      ["Property"]: NFTOrder.PROPERTY_ABI,
-    };
-
-    const rawSignature = await this.alice._signTypedData(
-      domain,
-      types,
-      message
-    );
-    const { v, r, s } = ethers.utils.splitSignature(rawSignature);
-    const buyOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 };
+    const buyOrderSignature = await buyOrder.sign(this.alice);
 
     /* bob fills buy order with swap to sushi */
     await this.erc721
@@ -153,20 +140,7 @@ describe("Test buy orders with swaps", function () {
       expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
-    const { domain, message } = buyOrder.getEIP712TypedData();
-    const types = {
-      [NFTOrder.STRUCT_NAME]: NFTOrder.STRUCT_ABI,
-      ["Fee"]: NFTOrder.FEE_ABI,
-      ["Property"]: NFTOrder.PROPERTY_ABI,
-    };
-
-    const rawSignature = await this.alice._signTypedData(
-      domain,
-      types,
-      message
-    );
-    const { v, r, s } = ethers.utils.splitSignature(rawSignature);
-    const buyOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 };
+    const buyOrderSignature = await buyOrder.sign(this.alice);
 
     /* bob fills buy order with swap to sushi */
     await this.erc1155
@@ -244,20 +218,7 @@ describe("Test sell orders with swap", function () {
       expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
-    const { domain, message } = sellOrder.getEIP712TypedData();
-    const types = {
-      [NFTOrder.STRUCT_NAME]: NFTOrder.STRUCT_ABI,
-      ["Fee"]: NFTOrder.FEE_ABI,
-      ["Property"]: NFTOrder.PROPERTY_ABI,
-    };
-
-    const rawSignature = await this.alice._signTypedData(
-      domain,
-      types,
-      message
-    );
-    const { v, r, s } = ethers.utils.splitSignature(rawSignature);
-    const sellOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 };
+    const sellOrderSignature = await sellOrder.sign(this.alice);
 
     /* bob fills sell order and swaps SUSHI to ETH to fill order */
     await this.sushi.connect(this.bob).approve(this.shoyuEx.address, "5000");
@@ -315,20 +276,7 @@ describe("Test sell orders with swap", function () {
       expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
-    const { domain, message } = sellOrder.getEIP712TypedData();
-    const types = {
-      [NFTOrder.STRUCT_NAME]: NFTOrder.STRUCT_ABI,
-      ["Fee"]: NFTOrder.FEE_ABI,
-      ["Property"]: NFTOrder.PROPERTY_ABI,
-    };
-
-    const rawSignature = await this.alice._signTypedData(
-      domain,
-      types,
-      message
-    );
-    const { v, r, s } = ethers.utils.splitSignature(rawSignature);
-    const sellOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 };
+    const sellOrderSignature = await sellOrder.sign(this.alice);
 
     /* bob fills sell order and swaps SUSHI to ETH to fill order */
     await this.sushi.connect(this.bob).approve(this.shoyuEx.address, "5000");
@@ -390,20 +338,7 @@ describe("Test sell orders with swap", function () {
       expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
-    const { domain, message } = sellOrder.getEIP712TypedData();
-    const types = {
-      [NFTOrder.STRUCT_NAME]: NFTOrder.STRUCT_ABI,
-      ["Fee"]: NFTOrder.FEE_ABI,
-      ["Property"]: NFTOrder.PROPERTY_ABI,
-    };
-
-    const rawSignature = await this.alice._signTypedData(
-      domain,
-      types,
-      message
-    );
-    const { v, r, s } = ethers.utils.splitSignature(rawSignature);
-    const sellOrderSignature = { v, r, s, signatureType: SignatureType.EIP712 };
+    const sellOrderSignature = await sellOrder.sign(this.alice);
 
     const aliceETHBalanceBefore = await this.alice.getBalance();
     const bobERC20BalanceBefore = await this.erc20.balanceOf(this.bob.address);

@@ -4,6 +4,8 @@ import { EIP712TypedData } from "@0x/types";
 import { hexUtils } from "@0x/utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, Zero } from "@ethersproject/constants";
+import { splitSignature } from "@ethersproject/bytes";
+import { TypedDataSigner } from "@ethersproject/abstract-signer";
 
 import {
   createExchangeProxyEIP712Domain,
@@ -46,6 +48,13 @@ interface Fee {
 interface Property {
   propertyValidator: string;
   propertyData: string;
+}
+
+interface OrderSignature {
+  v: number;
+  r: string;
+  s: string;
+  signatureType: SignatureType;
 }
 
 const NFT_ORDER_DEFAULT_VALUES = {
@@ -220,6 +229,22 @@ export class NFTOrder {
       this.chainId,
       this.verifyingContract
     );
+  }
+
+  public async sign(signer: TypedDataSigner): Promise<OrderSignature> {
+    const { domain, message } = this.getEIP712TypedData();
+
+    const types = {
+      [NFTOrder.STRUCT_NAME]: NFTOrder.STRUCT_ABI,
+      ["Fee"]: NFTOrder.FEE_ABI,
+      ["Property"]: NFTOrder.PROPERTY_ABI,
+    };
+
+    const rawSignature = await signer._signTypedData(domain, types, message);
+
+    const { v, r, s } = splitSignature(rawSignature);
+
+    return { v, r, s, signatureType: SignatureType.EIP712 };
   }
 
   public async getSignatureWithProviderAsync(
