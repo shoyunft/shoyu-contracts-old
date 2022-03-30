@@ -13,19 +13,13 @@ interface IShoyuNFTOrdersFeature {
   ///        sold. If the given order specifies properties,
   ///        the asset must satisfy those properties. Otherwise,
   ///        it must equal the tokenId in the order.
-  /// @param unwrapNativeToken If this parameter is true and the
-  ///        ERC20 token of the order is e.g. WETH, unwraps the
-  ///        token before transferring it to the taker.
-  /// @param outputToken The token the seller would like to receive.
-  /// @param minAmountOut The minimum amount of outputToken the
-  ///        buyer is willint to receive.
+  /// @param swapDetails The details of the swap the seller would
+  ///        like to perform.
   function sellAndSwapNFT(
     LibShoyuNFTOrder.NFTOrder calldata buyOrder,
     LibSignature.Signature calldata signature,
     uint256 nftTokenId,
-    bool unwrapNativeToken,
-    IERC20TokenV06 outputToken,
-    uint256 minAmountOut
+    LibShoyuNFTOrder.SwapExactInDetails calldata swapDetails
   ) external;
 
   /// @dev Buys an NFT asset by filling the given order.

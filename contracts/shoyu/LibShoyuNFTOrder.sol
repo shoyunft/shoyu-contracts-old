@@ -36,8 +36,15 @@ library LibShoyuNFTOrder {
 
   struct SwapExactOutDetails {
     address[] path;
-    uint256 maxAmountIn;
+    uint256 amountInMax;
     uint256 amountOut;
+  }
+
+  struct SwapExactInDetails {
+    address[] path;
+    uint256 amountIn;
+    uint256 amountOutMin;
+    bool unwrapNativeToken;
   }
 
   struct NFTOrder {

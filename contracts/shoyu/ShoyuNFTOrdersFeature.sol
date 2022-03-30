@@ -66,14 +66,12 @@ contract ShoyuNFTOrdersFeature is
     SushiswapRouter = sushiswapRouter;
   }
 
-  struct SellAndSwapParams {
+  struct SellParams {
     uint128 sellAmount;
     uint256 tokenId;
     bool unwrapNativeToken;
     address taker;
     address currentNftOwner;
-    IERC20TokenV06 outputToken;
-    uint256 minAmountOut;
   }
 
   struct BuyParams {
@@ -102,45 +100,51 @@ contract ShoyuNFTOrdersFeature is
   ///        sold. If the given order specifies properties,
   ///        the asset must satisfy those properties. Otherwise,
   ///        it must equal the tokenId in the order.
-  /// @param unwrapNativeToken If this parameter is true and the
-  ///        ERC20 token of the order is e.g. WETH, unwraps the
-  ///        token before transferring it to the taker.
-  /// @param outputToken The address of the ERC20 token the seller
-  ///        would like to receive
-  /// @param minAmountOut The minimum amount of outputToken received
+  /// @param swapDetails The details of the swap the seller would
+  ///        like to perform.
   function sellAndSwapNFT(
     LibShoyuNFTOrder.NFTOrder memory buyOrder,
     LibSignature.Signature memory signature,
     uint256 nftTokenId,
-    bool unwrapNativeToken,
-    IERC20TokenV06 outputToken,
-    uint256 minAmountOut
+    LibShoyuNFTOrder.SwapExactInDetails memory swapDetails
   ) public override {
-    _sellAndSwapNFT(
+    require(
+      swapDetails.path[0] == address(buyOrder.erc20Token),
+      "ShoyuNFTOrders::sellAndSwapNFT/TOKEN_MISMATCH"
+    );
+
+    uint256 erc20FillAmount = _sellNFT(
       buyOrder,
       signature,
-      SellAndSwapParams(
+      SellParams(
         buyOrder.nftTokenAmount,
         nftTokenId,
-        unwrapNativeToken,
-        msg.sender, //taker
-        msg.sender, // owner
-        outputToken,
-        minAmountOut
+        false, // unwrapNativeToken - set to `false` and handle unwrap in this function
+        address(this), // taker - set to `this` so we can swap the funds before sending funds to taker
+        msg.sender // owner
       )
     );
 
-    emit NFTOrderFilled(
-      buyOrder.direction,
-      buyOrder.maker,
-      msg.sender,
-      buyOrder.nonce,
-      buyOrder.erc20Token,
-      buyOrder.erc20TokenAmount,
-      buyOrder.nftToken,
-      nftTokenId,
-      buyOrder.nftTokenAmount
-    );
+    // TODO: is there some way to avoid this approval?
+    buyOrder.erc20Token.approve(address(SushiswapRouter), erc20FillAmount);
+
+    if (swapDetails.unwrapNativeToken) {
+      SushiswapRouter.swapExactTokensForETH(
+        erc20FillAmount,
+        swapDetails.amountOutMin,
+        swapDetails.path,
+        msg.sender,
+        buyOrder.expiry
+      );
+    } else {
+      SushiswapRouter.swapExactTokensForTokens(
+        erc20FillAmount,
+        swapDetails.amountOutMin,
+        swapDetails.path,
+        msg.sender,
+        buyOrder.expiry
+      );
+    }
   }
 
   /// @dev Buys an NFT asset by filling the given order.
@@ -255,17 +259,12 @@ contract ShoyuNFTOrdersFeature is
     _transferEth(msg.sender, ethBalanceAfter - ethBalanceBefore);
   }
 
-  function _sellAndSwapNFT(
-    LibShoyuNFTOrder.NFTOrder memory buyOrder,
-    LibSignature.Signature memory signature,
-    SellAndSwapParams memory params
+  // Core settlement logic for selling an NFT asset.
+  function _sellNFT(
+      LibShoyuNFTOrder.NFTOrder memory buyOrder,
+      LibSignature.Signature memory signature,
+      SellParams memory params
   ) internal returns (uint256 erc20FillAmount) {
-    // Output token must be different than buyOrder.erc20Token
-    require(
-      params.outputToken != buyOrder.erc20Token,
-      "ShoyuNFTOrders::_sellAndSwapNFT/SAME_TOKEN"
-    );
-
     LibShoyuNFTOrder.OrderInfo memory orderInfo = _getOrderInfo(buyOrder);
     // Check that the order can be filled.
     _validateBuyOrder(
@@ -287,7 +286,6 @@ contract ShoyuNFTOrdersFeature is
 
     _updateOrderState(buyOrder, orderInfo.orderHash, params.sellAmount);
 
-    // TODO: what is this?
     if (params.sellAmount == orderInfo.orderAmount) {
       erc20FillAmount = buyOrder.erc20TokenAmount;
     } else {
@@ -299,43 +297,35 @@ contract ShoyuNFTOrdersFeature is
       );
     }
 
-    // Transfer the ERC20 from the maker to the Exchange Proxy
-    // so we can swap it before sending it to the seller.
-    // TODO: Probably safe to just use ERC20.transferFrom for some
-    //       small gas savings
-    _transferERC20TokensFrom(
-      buyOrder.erc20Token,
-      buyOrder.maker,
-      address(this),
-      erc20FillAmount
-    );
-
-    // TODO: is there some way to avoid this approval?
-    buyOrder.erc20Token.approve(address(SushiswapRouter), erc20FillAmount);
-    address[] memory path = new address[](2);
-    path[0] = address(buyOrder.erc20Token);
-    path[1] = address(params.outputToken);
-
     if (params.unwrapNativeToken) {
-      if (params.outputToken != WETH) {
-        LibNFTOrdersRichErrors
-          .ERC20TokenMismatchError(address(params.outputToken), address(WETH))
-          .rrevert();
+      // The ERC20 token must be WETH for it to be unwrapped.
+      if (buyOrder.erc20Token != WETH) {
+        LibNFTOrdersRichErrors.ERC20TokenMismatchError(
+            address(buyOrder.erc20Token),
+            address(WETH)
+        ).rrevert();
       }
-      SushiswapRouter.swapExactTokensForETH(
-        erc20FillAmount,
-        params.minAmountOut,
-        path,
-        params.taker,
-        buyOrder.expiry
+      // Transfer the WETH from the maker to the Exchange Proxy
+      // so we can unwrap it before sending it to the seller.
+      // TODO: Probably safe to just use WETH.transferFrom for some
+      //       small gas savings
+      _transferERC20TokensFrom(
+        WETH,
+        buyOrder.maker,
+        address(this),
+        erc20FillAmount
       );
+      // Unwrap WETH into ETH.
+      WETH.withdraw(erc20FillAmount);
+      // Send ETH to the seller.
+      _transferEth(payable(params.taker), erc20FillAmount);
     } else {
-      SushiswapRouter.swapExactTokensForTokens(
-        erc20FillAmount,
-        0,
-        path,
+      // Transfer the ERC20 token from the buyer to the seller.
+      _transferERC20TokensFrom(
+        buyOrder.erc20Token,
+        buyOrder.maker,
         params.taker,
-        buyOrder.expiry
+        erc20FillAmount
       );
     }
 
@@ -355,11 +345,23 @@ contract ShoyuNFTOrdersFeature is
 
     // The buyer pays the order fees.
     _payFees(
-        buyOrder,
-        buyOrder.maker,
-        params.sellAmount,
-        orderInfo.orderAmount,
-        false
+      buyOrder,
+      buyOrder.maker,
+      params.sellAmount,
+      orderInfo.orderAmount,
+      false
+    );
+
+    emit NFTOrderFilled(
+      buyOrder.direction,
+      buyOrder.maker,
+      msg.sender,
+      buyOrder.nonce,
+      buyOrder.erc20Token,
+      buyOrder.erc20TokenAmount,
+      buyOrder.nftToken,
+      params.tokenId,
+      buyOrder.nftTokenAmount
     );
   }
 
@@ -442,7 +444,7 @@ contract ShoyuNFTOrdersFeature is
       );
 
       require(
-        amounts[0] <= swapDetails[i].maxAmountIn,
+        amounts[0] <= swapDetails[i].amountInMax,
         "ShoyuNFTOrders::_swapMultipleTokensForETH/INSUFFICIENT_FUNDS"
       );
 
@@ -465,7 +467,7 @@ contract ShoyuNFTOrdersFeature is
 
       SushiswapRouter.swapTokensForExactETH(
         swapDetails[i].amountOut,
-        swapDetails[i].maxAmountIn,
+        swapDetails[i].amountInMax,
         swapDetails[i].path,
         address(this),
         expiry

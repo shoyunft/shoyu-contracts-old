@@ -107,9 +107,12 @@ describe("Test buy orders with swaps", function () {
       buyOrder, // LibNFTOrder
       buyOrderSignature, // LibSignature
       buyOrder.nftTokenId, // tokenId
-      false, // unwrap
-      this.sushi.address, // outputToken
-      0 // minAmountOut
+      {
+        path: [buyOrder.erc20Token, this.sushi.address],
+        amountOutMin: 0,
+        amountIn: buyOrder.erc20TokenAmount,
+        unwrapNativeToken: false,
+      }
     );
 
     const aliceWETHBalance = await this.weth.balanceOf(this.alice.address);
@@ -161,9 +164,12 @@ describe("Test buy orders with swaps", function () {
       buyOrder, // LibNFTOrder
       buyOrderSignature, // LibSignature
       buyOrder.nftTokenId, // tokenId
-      false, // unwrap
-      this.sushi.address, // outputToken
-      0 // minAmountOut
+      {
+        path: [this.weth.address, this.sushi.address],
+        amountOutMin: 0,
+        amountIn: 0,
+        unwrapNativeToken: false,
+      }
     );
 
     const aliceWETHBalance = await this.weth.balanceOf(this.alice.address);
@@ -240,7 +246,7 @@ describe("Test sell orders with swap", function () {
       [
         {
           inputToken: this.sushi.address,
-          maxAmountIn: MaxUint256,
+          amountInMax: MaxUint256,
           path: [this.sushi.address, this.weth.address],
           amountOut: sellOrder.erc20TokenAmount,
         },
@@ -298,7 +304,7 @@ describe("Test sell orders with swap", function () {
       [
         {
           inputToken: this.sushi.address,
-          maxAmountIn: MaxUint256,
+          amountInMax: MaxUint256,
           path: [this.sushi.address, this.weth.address],
           amountOut: sellOrder.erc20TokenAmount,
         },
@@ -369,12 +375,12 @@ describe("Test sell orders with swap", function () {
       [
         {
           path: [this.sushi.address, this.weth.address],
-          maxAmountIn: MaxUint256,
+          amountInMax: MaxUint256,
           amountOut: sellOrder.erc20TokenAmount.mul(3).div(4),
         }, // pay 3/4 with sushi
         {
           path: [this.erc20.address, this.weth.address],
-          maxAmountIn: MaxUint256,
+          amountInMax: MaxUint256,
           amountOut: sellOrder.erc20TokenAmount.div(4),
         }, // pay 1/4 with erc20
       ] // SwapExactOutDetails
@@ -479,7 +485,7 @@ describe("Test sell orders with swap", function () {
       [
         {
           path: [this.sushi.address, this.weth.address],
-          maxAmountIn: MaxUint256,
+          amountInMax: MaxUint256,
           amountOut: sellOrderERC1155.erc20TokenAmount
             .add(sellOrderERC1155.fees[0].amount)
             .add(sellOrderERC721.erc20TokenAmount)
