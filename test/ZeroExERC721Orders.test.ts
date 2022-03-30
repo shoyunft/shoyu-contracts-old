@@ -13,7 +13,7 @@ import {
 
 use(solidity);
 
-describe("Test ZeroEx ERC721 buy and sell orders", function () {
+describe.skip("Test ZeroEx ERC721 buy and sell orders", function () {
   before(async function () {
     this.signers = await ethers.getSigners();
     this.alice = this.signers[0];
