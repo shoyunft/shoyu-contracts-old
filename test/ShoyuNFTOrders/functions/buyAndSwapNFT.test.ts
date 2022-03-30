@@ -64,7 +64,7 @@ export function buyAndSwapNFT() {
     expect(aliceERC721Balance).to.eq("0");
     expect(aliceSUSHIBalance).to.eq("0");
     expect(bobERC721Balance).to.eq("1");
-    expect(bobSUSHIBalance).to.lt("5000");
+    expect(bobSUSHIBalance).to.lt(5000);
   });
 
   it("Buyer can pay for ERC1155 with a different currency from listing", async function () {
@@ -128,7 +128,7 @@ export function buyAndSwapNFT() {
     expect(aliceERC1155Balance).to.eq("0");
     expect(aliceSUSHIBalance).to.eq("0");
     expect(bobERC1155Balance).to.eq("1");
-    expect(bobSUSHIBalance).to.lt("5000");
+    expect(bobSUSHIBalance).to.lt(5000);
   });
 
   it("Buyer can pay for ERC721 with multiple currencies", async function () {

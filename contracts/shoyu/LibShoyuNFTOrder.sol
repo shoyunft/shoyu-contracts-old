@@ -44,7 +44,6 @@ library LibShoyuNFTOrder {
     address[] path;
     uint256 amountIn;
     uint256 amountOutMin;
-    bool unwrapNativeToken;
   }
 
   struct NFTOrder {

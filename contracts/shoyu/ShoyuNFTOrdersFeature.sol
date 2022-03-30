@@ -119,7 +119,7 @@ contract ShoyuNFTOrdersFeature is
       SellParams(
         buyOrder.nftTokenAmount,
         nftTokenId,
-        false, // unwrapNativeToken - set to `false` and handle unwrap in this function
+        false, // unwrapNativeToken
         address(this), // taker - set to `this` so we can swap the funds before sending funds to taker
         msg.sender // owner
       )
@@ -128,23 +128,13 @@ contract ShoyuNFTOrdersFeature is
     // TODO: is there some way to avoid this approval?
     buyOrder.erc20Token.approve(address(SushiswapRouter), erc20FillAmount);
 
-    if (swapDetails.unwrapNativeToken) {
-      SushiswapRouter.swapExactTokensForETH(
-        erc20FillAmount,
-        swapDetails.amountOutMin,
-        swapDetails.path,
-        msg.sender,
-        buyOrder.expiry
-      );
-    } else {
-      SushiswapRouter.swapExactTokensForTokens(
-        erc20FillAmount,
-        swapDetails.amountOutMin,
-        swapDetails.path,
-        msg.sender,
-        buyOrder.expiry
-      );
-    }
+    SushiswapRouter.swapExactTokensForTokens(
+      erc20FillAmount,
+      swapDetails.amountOutMin,
+      swapDetails.path,
+      msg.sender,
+      buyOrder.expiry
+    );
   }
 
   /// @dev Buys an NFT asset by filling the given order.
