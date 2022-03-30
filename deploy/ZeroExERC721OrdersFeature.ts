@@ -54,6 +54,6 @@ const deployFunction: DeployFunction = async function ({
 
 export default deployFunction;
 
-deployFunction.dependencies = ["ZeroEx"];
+deployFunction.dependencies = ["ZeroEx", "WETH9Mock"];
 
 deployFunction.tags = ["ZeroExERC721OrdersFeature"];
