@@ -37,7 +37,7 @@ export function buyAndSwapNFTs() {
       nftTokenAmount: BigNumber.from(1),
       maker: this.alice.address,
       taker: AddressZero,
-      nonce: BigNumber.from(69),
+      nonce: BigNumber.from(Date.now()),
       expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
       fees: [
         {
@@ -60,7 +60,7 @@ export function buyAndSwapNFTs() {
       nftTokenAmount: BigNumber.from(2),
       maker: this.alice.address,
       taker: AddressZero,
-      nonce: BigNumber.from(69),
+      nonce: BigNumber.from(Date.now()),
       expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
       fees: [
         {
@@ -163,7 +163,7 @@ export function buyAndSwapNFTs() {
       nftTokenAmount: BigNumber.from(1),
       maker: this.alice.address,
       taker: AddressZero,
-      nonce: BigNumber.from(69),
+      nonce: BigNumber.from(Date.now()),
       expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
       fees: [
         {
@@ -186,7 +186,7 @@ export function buyAndSwapNFTs() {
       nftTokenAmount: BigNumber.from(2),
       maker: this.alice.address,
       taker: AddressZero,
-      nonce: BigNumber.from(69),
+      nonce: BigNumber.from(Date.now()),
       expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
       fees: [
         {
@@ -298,7 +298,7 @@ export function buyAndSwapNFTs() {
       nftTokenAmount: BigNumber.from(1),
       maker: this.alice.address,
       taker: AddressZero,
-      nonce: BigNumber.from(69),
+      nonce: BigNumber.from(Date.now()),
       expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
       fees: [
         {
@@ -321,7 +321,7 @@ export function buyAndSwapNFTs() {
       nftTokenAmount: BigNumber.from(2),
       maker: this.alice.address,
       taker: AddressZero,
-      nonce: BigNumber.from(69),
+      nonce: BigNumber.from(Date.now()),
       expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
       fees: [
         {

@@ -83,6 +83,8 @@ contract ShoyuNFTOrdersFeature is
   ///      Should be delegatecalled by `Migrate.migrate()`.
   /// @return success `LibMigrate.SUCCESS` on success.
   function migrate() external returns (bytes4 success) {
+    _registerFeatureFunction(this.sellNFT.selector);
+    _registerFeatureFunction(this.buyNFT.selector);
     _registerFeatureFunction(this.sellAndSwapNFT.selector);
     _registerFeatureFunction(this.buyAndSwapNFT.selector);
     _registerFeatureFunction(this.buyAndSwapNFTs.selector);
@@ -90,7 +92,80 @@ contract ShoyuNFTOrdersFeature is
     _registerFeatureFunction(this.validateNFTOrderProperties.selector);
     _registerFeatureFunction(this.getNFTOrderInfo.selector);
     _registerFeatureFunction(this.getNFTOrderHash.selector);
+    _registerFeatureFunction(this.cancelNFTOrder.selector);
+    _registerFeatureFunction(this.batchCancelNFTOrders.selector);
     return LibMigrate.MIGRATE_SUCCESS;
+  }
+
+  /// @dev Sells an NFT asset to fill the given order.
+  /// @param buyOrder The NFT buy order.
+  /// @param signature The order signature from the maker.
+  /// @param nftTokenId The ID of the NFT asset being
+  ///        sold. If the given order specifies properties,
+  ///        the asset must satisfy those properties. Otherwise,
+  ///        it must equal the tokenId in the order.
+  /// @param nftSellAmount The amount of the NFT asset
+  ///        to sell.
+  /// @param unwrapNativeToken If this parameter is true and the
+  ///        ERC20 token of the order is e.g. WETH, unwraps the
+  ///        token before transferring it to the taker.
+  function sellNFT(
+    LibShoyuNFTOrder.NFTOrder memory buyOrder,
+    LibSignature.Signature memory signature,
+    uint256 nftTokenId,
+    uint128 nftSellAmount,
+    bool unwrapNativeToken
+  )
+    public
+    override
+  {
+    _sellNFT(
+      buyOrder,
+      signature,
+      SellParams(
+        nftSellAmount,
+        nftTokenId,
+        unwrapNativeToken,
+        msg.sender, // taker
+        msg.sender // owner
+      )
+    );
+  }
+
+  /// @dev Buys an NFT asset by filling the given order.
+  /// @param sellOrder The NFT sell order.
+  /// @param signature The order signature.
+  /// @param nftBuyAmount The amount of the NFT asset
+  ///        to buy.
+  function buyNFT(
+    LibShoyuNFTOrder.NFTOrder memory sellOrder,
+    LibSignature.Signature memory signature,
+    uint128 nftBuyAmount
+  )
+    public
+    override
+    payable
+  {
+    uint256 ethBalanceBefore = address(this).balance
+      .safeSub(msg.value);
+    _buyNFT(
+      sellOrder,
+      signature,
+      BuyParams(
+        nftBuyAmount,
+        msg.value
+      )
+    );
+    uint256 ethBalanceAfter = address(this).balance;
+    // Cannot use pre-existing ETH balance
+    if (ethBalanceAfter < ethBalanceBefore) {
+      LibNFTOrdersRichErrors.OverspentEthError(
+        ethBalanceBefore - ethBalanceAfter + msg.value,
+        msg.value
+      ).rrevert();
+    }
+    // Refund
+    _transferEth(msg.sender, ethBalanceAfter - ethBalanceBefore);
   }
 
   /// @dev Sells an NFT asset to fill the given order.
@@ -247,6 +322,39 @@ contract ShoyuNFTOrdersFeature is
 
     // Refund
     _transferEth(msg.sender, ethBalanceAfter - ethBalanceBefore);
+  }
+
+  /// @dev Cancel a single NFT order by its nonce. The caller
+  ///      should be the maker of the order. Silently succeeds if
+  ///      an order with the same nonce has already been filled or
+  ///      cancelled.
+  /// @param orderNonce The order nonce.
+  function cancelNFTOrder(uint256 orderNonce)
+    public
+    override
+  {
+    // The bitvector is indexed by the lower 8 bits of the nonce.
+    uint256 flag = 1 << (orderNonce & 255);
+    // Update order cancellation bit vector to indicate that the order
+    // has been cancelled/filled by setting the designated bit to 1.
+    LibShoyuNFTOrdersStorage.getStorage().orderCancellationByMaker
+      [msg.sender][uint248(orderNonce >> 8)] |= flag;
+
+    emit NFTOrderCancelled(msg.sender, orderNonce);
+  }
+
+  /// @dev Cancel multiple NFT orders by their nonces. The caller
+  ///      should be the maker of the orders. Silently succeeds if
+  ///      an order with the same nonce has already been filled or
+  ///      cancelled.
+  /// @param orderNonces The order nonces.
+  function batchCancelNFTOrders(uint256[] calldata orderNonces)
+    external
+    override
+  {
+    for (uint256 i = 0; i < orderNonces.length; i++) {
+      cancelNFTOrder(orderNonces[i]);
+    }
   }
 
   // Core settlement logic for selling an NFT asset.

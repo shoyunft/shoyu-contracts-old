@@ -13,6 +13,40 @@ interface IShoyuNFTOrdersFeature {
   ///        sold. If the given order specifies properties,
   ///        the asset must satisfy those properties. Otherwise,
   ///        it must equal the tokenId in the order.
+  /// @param nftSellAmount The amount of the NFT asset
+  ///        to sell.
+  /// @param unwrapNativeToken If this parameter is true and the
+  ///        ERC20 token of the order is e.g. WETH, unwraps the
+  ///        token before transferring it to the taker.
+  function sellNFT(
+    LibShoyuNFTOrder.NFTOrder calldata buyOrder,
+    LibSignature.Signature calldata signature,
+    uint256 nftTokenId,
+    uint128 nftSellAmount,
+    bool unwrapNativeToken
+  )
+    external;
+
+  /// @dev Buys an NFT asset by filling the given order.
+  /// @param sellOrder The NFT sell order.
+  /// @param signature The order signature.
+  /// @param nftBuyAmount The amount of the NFT asset
+  ///        to buy.
+  function buyNFT(
+    LibShoyuNFTOrder.NFTOrder calldata sellOrder,
+    LibSignature.Signature calldata signature,
+    uint128 nftBuyAmount
+  )
+    external
+    payable;
+
+  /// @dev Sells an NFT asset to fill the given order.
+  /// @param buyOrder The NFT buy order.
+  /// @param signature The order signature from the maker.
+  /// @param nftTokenId The ID of the NFT asset being
+  ///        sold. If the given order specifies properties,
+  ///        the asset must satisfy those properties. Otherwise,
+  ///        it must equal the tokenId in the order.
   /// @param swapDetails The details of the swap the seller would
   ///        like to perform.
   function sellAndSwapNFT(
@@ -47,16 +81,21 @@ interface IShoyuNFTOrdersFeature {
     bool revertIfIncomplete
   ) external payable returns (bool[] memory successes);
 
-  /// @dev Buys NFT assets by filling the given orders with ETH.
-  /// @param sellOrders The NFT sell orders.
-  /// @param signatures The order signatures.
-  /// @param nftBuyAmounts The amount of the NFT assets to buy.
-  // function buyNFTs(
-  //   LibShoyuNFTOrder.NFTOrder[] calldata sellOrders,
-  //   LibSignature.Signature[] calldata signatures,
-  //   uint128[] memory nftBuyAmounts,
-  //   LibShoyuNFTOrder.SwapExactOutDetails[] memory swapDetails
-  // ) external payable returns (bool[] memory successes);
+  /// @dev Cancel a single NFT order by its nonce. The caller
+  ///      should be the maker of the order. Silently succeeds if
+  ///      an order with the same nonce has already been filled or
+  ///      cancelled.
+  /// @param orderNonce The order nonce.
+  function cancelNFTOrder(uint256 orderNonce)
+      external;
+
+  /// @dev Cancel multiple NFT orders by their nonces. The caller
+  ///      should be the maker of the orders. Silently succeeds if
+  ///      an order with the same nonce has already been filled or
+  ///      cancelled.
+  /// @param orderNonces The order nonces.
+  function batchCancelNFTOrders(uint256[] calldata orderNonces)
+      external;
 
   /// @dev Approves an NFT order on-chain. After pre-signing
   ///      the order, the `PRESIGNED` signature type will become
@@ -125,5 +164,13 @@ interface IShoyuNFTOrdersFeature {
     address nftToken,
     uint256 nftTokenId,
     uint128 nftTokenAmount
+  );
+
+  /// @dev Emitted whenever an `NFTOrder` is cancelled.
+  /// @param maker The maker of the order.
+  /// @param nonce The nonce of the order that was cancelled.
+  event NFTOrderCancelled(
+    address maker,
+    uint256 nonce
   );
 }

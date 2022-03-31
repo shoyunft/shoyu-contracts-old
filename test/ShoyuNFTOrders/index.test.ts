@@ -3,7 +3,15 @@ import { use } from "chai";
 import { solidity } from "ethereum-waffle";
 
 import { seedSushiswapPools } from "../fixtures";
-import { sellAndSwapNFT, buyAndSwapNFT, buyAndSwapNFTs } from "./functions";
+import {
+  sellAndSwapNFT,
+  buyAndSwapNFT,
+  buyAndSwapNFTs,
+  cancelNFTOrder,
+  batchCancelNFTOrders,
+  buyNFT,
+  sellNFT,
+} from "./functions";
 
 use(solidity);
 
@@ -69,7 +77,11 @@ describe("ShoyuNFTOrders", function () {
     });
   });
 
+  describe("buyNFT", buyNFT.bind(this));
+  describe("sellNFT", sellNFT.bind(this));
   describe("sellAndSwapNFT", sellAndSwapNFT.bind(this));
   describe("buyAndSwapNFT", buyAndSwapNFT.bind(this));
   describe("buyAndSwapNFTs", buyAndSwapNFTs.bind(this));
+  describe("cancelNFTOrder", cancelNFTOrder.bind(this));
+  describe("batchCancelNFTOrders", batchCancelNFTOrders.bind(this));
 });
