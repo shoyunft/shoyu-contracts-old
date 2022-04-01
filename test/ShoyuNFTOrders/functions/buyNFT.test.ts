@@ -1,5 +1,5 @@
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero, MaxUint256 } from "@ethersproject/constants";
+import { AddressZero } from "@ethersproject/constants";
 
 import {
   NFTOrder,
@@ -17,7 +17,6 @@ export function buyNFT() {
 
     /* alice creates sell order for nft */
     await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "420");
-    const aliceETHBalanceBefore = await this.alice.getBalance();
     const sellOrder = new NFTOrder({
       chainId: 31337,
       verifyingContract: this.shoyuEx.address,
@@ -36,21 +35,15 @@ export function buyNFT() {
 
     const sellOrderSignature = await sellOrder.sign(this.alice);
 
-    const tx = await this.shoyuEx.connect(this.bob).buyNFT(
-      sellOrder, // LibNFTOrder
-      sellOrderSignature, // LibSignature
-      "1", // nftBuyAmount
-      { value: sellOrder.erc20TokenAmount }
-    );
-
-    const aliceETHBalanceAfter = await this.alice.getBalance();
-    const aliceERC721Balance = await this.erc721.balanceOf(this.alice.address);
-    const bobERC721Balance = await this.erc721.balanceOf(this.bob.address);
-
-    expect(aliceETHBalanceAfter).to.eq(
-      aliceETHBalanceBefore.add(sellOrder.erc20TokenAmount)
-    );
-    expect(aliceERC721Balance).to.eq("0");
-    expect(bobERC721Balance).to.eq("1");
+    await expect(() =>
+      this.shoyuEx.connect(this.bob).buyNFT(
+        sellOrder, // LibNFTOrder
+        sellOrderSignature, // LibSignature
+        "1", // nftBuyAmount
+        { value: sellOrder.erc20TokenAmount }
+      )
+    ).to.changeEtherBalance(this.alice, sellOrder.erc20TokenAmount);
+    expect(await this.erc721.balanceOf(this.alice.address)).to.eq("0");
+    expect(await this.erc721.balanceOf(this.bob.address)).to.eq("1");
   });
 }

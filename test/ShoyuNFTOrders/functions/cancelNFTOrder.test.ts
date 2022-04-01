@@ -94,7 +94,9 @@ export function cancelNFTOrder() {
 
     /* alice creates a buy order for bob's ERC7221 */
     const offerAmount = BigNumber.from("5000");
-    await this.weth.connect(this.alice).approve(this.shoyuEx.address, "50000");
+    await this.weth
+      .connect(this.alice)
+      .approve(this.shoyuEx.address, MaxUint256);
     const buyOrder = new NFTOrder({
       chainId: 31337,
       verifyingContract: this.shoyuEx.address,
@@ -137,7 +139,9 @@ export function cancelNFTOrder() {
 
     /* alice creates a buy order for bob's ERC7221 */
     const offerAmount = BigNumber.from("5000");
-    await this.weth.connect(this.alice).approve(this.shoyuEx.address, "50000");
+    await this.weth
+      .connect(this.alice)
+      .approve(this.shoyuEx.address, MaxUint256);
     const buyOrder = new NFTOrder({
       chainId: 31337,
       verifyingContract: this.shoyuEx.address,

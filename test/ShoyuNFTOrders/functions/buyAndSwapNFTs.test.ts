@@ -74,66 +74,54 @@ export function buyAndSwapNFTs() {
     const sellOrderERC721Signature = await sellOrderERC721.sign(this.alice);
     const sellOrderERC1155Signature = await sellOrderERC1155.sign(this.alice);
 
-    const aliceETHBalanceBefore = await this.alice.getBalance();
     const bobSUSHIBalanceBefore = await this.sushi.balanceOf(this.bob.address);
-    const deployerETHBalanceBefore = await this.deployer.getBalance();
 
-    /* bob fills sell order and swaps SUSHI and ERC20 to ETH to fill order */
+    /* bob fills sell order and swaps SUSHI to ETH to fill order */
     await this.sushi
       .connect(this.bob)
       .approve(this.shoyuEx.address, MaxUint256);
-    const tx = await this.shoyuEx.connect(this.bob).buyAndSwapNFTs(
-      [sellOrderERC721, sellOrderERC1155], // LibNFTOrder
-      [sellOrderERC721Signature, sellOrderERC1155Signature], // LibSignature
-      [1, 2], // nftBuyAmount
+
+    await expect(() =>
+      this.shoyuEx.connect(this.bob).buyAndSwapNFTs(
+        [sellOrderERC721, sellOrderERC1155], // LibNFTOrder
+        [sellOrderERC721Signature, sellOrderERC1155Signature], // LibSignature
+        [1, 2], // nftBuyAmount
+        [
+          {
+            path: [this.sushi.address, this.weth.address],
+            amountInMax: MaxUint256,
+            amountOut: sellOrderERC1155.erc20TokenAmount
+              .add(sellOrderERC1155.fees[0].amount)
+              .add(sellOrderERC721.erc20TokenAmount)
+              .add(sellOrderERC721.fees[0].amount),
+          },
+        ], // SwapExactOutDetails
+        true // revertIfIncomplete
+      )
+    ).to.changeEtherBalances(
+      [this.alice, this.deployer],
       [
-        {
-          path: [this.sushi.address, this.weth.address],
-          amountInMax: MaxUint256,
-          amountOut: sellOrderERC1155.erc20TokenAmount
-            .add(sellOrderERC1155.fees[0].amount)
-            .add(sellOrderERC721.erc20TokenAmount)
-            .add(sellOrderERC721.fees[0].amount),
-        },
-      ], // SwapExactOutDetails
-      true // revertIfIncomplete
+        sellOrderERC721.erc20TokenAmount.add(sellOrderERC1155.erc20TokenAmount),
+        sellOrderERC1155.fees[0].amount.add(sellOrderERC721.fees[0].amount),
+      ]
     );
-
-    const aliceETHBalanceAfter = await this.alice.getBalance();
-    const aliceERC721BalanceAfter = await this.erc721.balanceOf(
-      this.alice.address
-    );
-    const aliceSUSHIBalanceAfter = await this.sushi.balanceOf(
-      this.alice.address
-    );
-    const aliceERC1155BalanceAfter = await this.erc1155.balanceOf(
-      this.alice.address,
-      sellOrderERC1155.nftTokenId
-    );
-
-    const bobERC721BalanceAfter = await this.erc721.balanceOf(this.bob.address);
-    const bobSUSHIBalanceAfter = await this.sushi.balanceOf(this.bob.address);
-    const bobERC1155BalanceAfter = await this.erc1155.balanceOf(
-      this.bob.address,
-      sellOrderERC1155.nftTokenId
-    );
-    const deployerETHBalanceAfter = await this.deployer.getBalance();
-
-    expect(aliceETHBalanceAfter).to.eq(
-      aliceETHBalanceBefore
-        .add(sellOrderERC721.erc20TokenAmount)
-        .add(sellOrderERC1155.erc20TokenAmount)
-    );
-    expect(aliceERC721BalanceAfter).to.eq("0");
-    expect(aliceERC1155BalanceAfter).to.eq("0");
-    expect(aliceSUSHIBalanceAfter).to.eq("0");
-    expect(bobERC721BalanceAfter).to.eq("1");
-    expect(bobERC1155BalanceAfter).to.eq("2");
-    expect(bobSUSHIBalanceAfter).to.lt(bobSUSHIBalanceBefore);
-    expect(deployerETHBalanceAfter).to.eq(
-      deployerETHBalanceBefore
-        .add(sellOrderERC1155.fees[0].amount)
-        .add(sellOrderERC721.fees[0].amount)
+    expect(await this.erc721.balanceOf(this.alice.address)).to.eq("0");
+    expect(
+      await this.erc1155.balanceOf(
+        this.alice.address,
+        sellOrderERC1155.nftTokenId
+      )
+    ).to.eq("0");
+    expect(await this.sushi.balanceOf(this.alice.address)).to.eq("0");
+    expect(await this.erc721.balanceOf(this.bob.address)).to.eq("1");
+    expect(
+      await this.erc1155.balanceOf(
+        this.bob.address,
+        sellOrderERC1155.nftTokenId
+      )
+    ).to.eq("2");
+    expect(await this.sushi.balanceOf(this.bob.address)).to.lt(
+      bobSUSHIBalanceBefore
     );
   });
 
@@ -200,9 +188,7 @@ export function buyAndSwapNFTs() {
     const sellOrderERC721Signature = await sellOrderERC721.sign(this.alice);
     const sellOrderERC1155Signature = await sellOrderERC1155.sign(this.alice);
 
-    const aliceETHBalanceBefore = await this.alice.getBalance();
     const bobSUSHIBalanceBefore = await this.sushi.balanceOf(this.bob.address);
-    const deployerETHBalanceBefore = await this.deployer.getBalance();
 
     const totalAmount = sellOrderERC1155.erc20TokenAmount
       .add(sellOrderERC1155.fees[0].amount)
@@ -213,63 +199,49 @@ export function buyAndSwapNFTs() {
     await this.sushi
       .connect(this.bob)
       .approve(this.shoyuEx.address, MaxUint256);
-    const bobETHBalanceBefore = await this.bob.getBalance();
-    const tx = await this.shoyuEx.connect(this.bob).buyAndSwapNFTs(
-      [sellOrderERC721, sellOrderERC1155], // LibNFTOrder
-      [sellOrderERC721Signature, sellOrderERC1155Signature], // LibSignature
-      [1, 2], // nftBuyAmount
-      [
+
+    await expect(() =>
+      this.shoyuEx.connect(this.bob).buyAndSwapNFTs(
+        [sellOrderERC721, sellOrderERC1155], // LibNFTOrder
+        [sellOrderERC721Signature, sellOrderERC1155Signature], // LibSignature
+        [1, 2], // nftBuyAmount
+        [
+          {
+            path: [this.sushi.address, this.weth.address],
+            amountInMax: MaxUint256,
+            amountOut: totalAmount.div(2),
+          },
+        ], // SwapExactOutDetails
+        true, // revertIfIncomplete
         {
-          path: [this.sushi.address, this.weth.address],
-          amountInMax: MaxUint256,
-          amountOut: totalAmount.div(2),
-        },
-      ], // SwapExactOutDetails
-      true, // revertIfIncomplete
-      {
-        value: totalAmount.div(2),
-      }
+          value: totalAmount.div(2),
+        }
+      )
+    ).to.changeEtherBalances(
+      [this.alice, this.deployer, this.bob],
+      [
+        sellOrderERC721.erc20TokenAmount.add(sellOrderERC1155.erc20TokenAmount),
+        sellOrderERC1155.fees[0].amount.add(sellOrderERC721.fees[0].amount),
+        -totalAmount.div(2),
+      ]
     );
-
-    const aliceETHBalanceAfter = await this.alice.getBalance();
-    const aliceERC721BalanceAfter = await this.erc721.balanceOf(
-      this.alice.address
-    );
-    const aliceSUSHIBalanceAfter = await this.sushi.balanceOf(
-      this.alice.address
-    );
-    const aliceERC1155BalanceAfter = await this.erc1155.balanceOf(
-      this.alice.address,
-      sellOrderERC1155.nftTokenId
-    );
-
-    const bobERC721BalanceAfter = await this.erc721.balanceOf(this.bob.address);
-    const bobSUSHIBalanceAfter = await this.sushi.balanceOf(this.bob.address);
-    const bobERC1155BalanceAfter = await this.erc1155.balanceOf(
-      this.bob.address,
-      sellOrderERC1155.nftTokenId
-    );
-    const bobETHBalanceAfter = await this.bob.getBalance();
-    const deployerETHBalanceAfter = await this.deployer.getBalance();
-
-    expect(aliceETHBalanceAfter).to.eq(
-      aliceETHBalanceBefore
-        .add(sellOrderERC721.erc20TokenAmount)
-        .add(sellOrderERC1155.erc20TokenAmount)
-    );
-    expect(aliceERC721BalanceAfter).to.eq("0");
-    expect(aliceERC1155BalanceAfter).to.eq("0");
-    expect(aliceSUSHIBalanceAfter).to.eq("0");
-    expect(bobERC721BalanceAfter).to.eq("1");
-    expect(bobERC1155BalanceAfter).to.eq("2");
-    expect(bobSUSHIBalanceAfter).to.lt(bobSUSHIBalanceBefore);
-    expect(bobETHBalanceAfter).to.lt(
-      bobETHBalanceBefore.sub(totalAmount.div(2))
-    );
-    expect(deployerETHBalanceAfter).to.eq(
-      deployerETHBalanceBefore
-        .add(sellOrderERC1155.fees[0].amount)
-        .add(sellOrderERC721.fees[0].amount)
+    expect(await this.erc721.balanceOf(this.alice.address)).to.eq("0");
+    expect(
+      await this.erc1155.balanceOf(
+        this.alice.address,
+        sellOrderERC1155.nftTokenId
+      )
+    ).to.eq("0");
+    expect(await this.sushi.balanceOf(this.alice.address)).to.eq("0");
+    expect(await this.erc721.balanceOf(this.bob.address)).to.eq("1");
+    expect(
+      await this.erc1155.balanceOf(
+        this.bob.address,
+        sellOrderERC1155.nftTokenId
+      )
+    ).to.eq("2");
+    expect(await this.sushi.balanceOf(this.bob.address)).to.lt(
+      bobSUSHIBalanceBefore
     );
   });
 
@@ -335,62 +307,45 @@ export function buyAndSwapNFTs() {
     const sellOrderERC721Signature = await sellOrderERC721.sign(this.alice);
     const sellOrderERC1155Signature = await sellOrderERC1155.sign(this.alice);
 
-    const aliceETHBalanceBefore = await this.alice.getBalance();
-    const deployerETHBalanceBefore = await this.deployer.getBalance();
-
     const totalAmount = sellOrderERC1155.erc20TokenAmount
       .add(sellOrderERC1155.fees[0].amount)
       .add(sellOrderERC721.erc20TokenAmount)
       .add(sellOrderERC721.fees[0].amount);
 
     /* bob fills sell order with ETH */
-    const bobETHBalanceBefore = await this.bob.getBalance();
-    const tx = await this.shoyuEx.connect(this.bob).buyAndSwapNFTs(
-      [sellOrderERC721, sellOrderERC1155], // LibNFTOrder
-      [sellOrderERC721Signature, sellOrderERC1155Signature], // LibSignature
-      [1, 2], // nftBuyAmount
-      [], // SwapExactOutDetails
-      true, // revertIfIncomplete
-      {
-        value: totalAmount,
-      }
+    await expect(() =>
+      this.shoyuEx.connect(this.bob).buyAndSwapNFTs(
+        [sellOrderERC721, sellOrderERC1155], // LibNFTOrder
+        [sellOrderERC721Signature, sellOrderERC1155Signature], // LibSignature
+        [1, 2], // nftBuyAmount
+        [], // SwapExactOutDetails
+        true, // revertIfIncomplete
+        {
+          value: totalAmount,
+        }
+      )
+    ).to.changeEtherBalances(
+      [this.alice, this.deployer, this.bob],
+      [
+        sellOrderERC721.erc20TokenAmount.add(sellOrderERC1155.erc20TokenAmount),
+        sellOrderERC1155.fees[0].amount.add(sellOrderERC721.fees[0].amount),
+        -totalAmount,
+      ]
     );
-
-    const aliceETHBalanceAfter = await this.alice.getBalance();
-    const aliceERC721BalanceAfter = await this.erc721.balanceOf(
-      this.alice.address
-    );
-    const aliceSUSHIBalanceAfter = await this.sushi.balanceOf(
-      this.alice.address
-    );
-    const aliceERC1155BalanceAfter = await this.erc1155.balanceOf(
-      this.alice.address,
-      sellOrderERC1155.nftTokenId
-    );
-
-    const bobERC721BalanceAfter = await this.erc721.balanceOf(this.bob.address);
-    const bobERC1155BalanceAfter = await this.erc1155.balanceOf(
-      this.bob.address,
-      sellOrderERC1155.nftTokenId
-    );
-    const bobETHBalanceAfter = await this.bob.getBalance();
-    const deployerETHBalanceAfter = await this.deployer.getBalance();
-
-    expect(aliceETHBalanceAfter).to.eq(
-      aliceETHBalanceBefore
-        .add(sellOrderERC721.erc20TokenAmount)
-        .add(sellOrderERC1155.erc20TokenAmount)
-    );
-    expect(aliceERC721BalanceAfter).to.eq("0");
-    expect(aliceERC1155BalanceAfter).to.eq("0");
-    expect(aliceSUSHIBalanceAfter).to.eq("0");
-    expect(bobERC721BalanceAfter).to.eq("1");
-    expect(bobERC1155BalanceAfter).to.eq("2");
-    expect(bobETHBalanceAfter).to.lt(bobETHBalanceBefore.sub(totalAmount));
-    expect(deployerETHBalanceAfter).to.eq(
-      deployerETHBalanceBefore
-        .add(sellOrderERC1155.fees[0].amount)
-        .add(sellOrderERC721.fees[0].amount)
-    );
+    expect(await this.erc721.balanceOf(this.alice.address)).to.eq("0");
+    expect(
+      await this.erc1155.balanceOf(
+        this.alice.address,
+        sellOrderERC1155.nftTokenId
+      )
+    ).to.eq("0");
+    expect(await this.sushi.balanceOf(this.alice.address)).to.eq("0");
+    expect(await this.erc721.balanceOf(this.bob.address)).to.eq("1");
+    expect(
+      await this.erc1155.balanceOf(
+        this.bob.address,
+        sellOrderERC1155.nftTokenId
+      )
+    ).to.eq("2");
   });
 }
