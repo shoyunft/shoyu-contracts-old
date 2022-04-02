@@ -53,7 +53,22 @@ export function buyAndSwapNFT() {
           },
         ] // SwapExactOutDetails
       )
-    ).to.changeEtherBalance(this.alice, sellOrder.erc20TokenAmount);
+    )
+      .to.emit(this.erc721, "Transfer")
+      .withArgs(this.alice.address, this.bob.address, sellOrder.nftTokenId)
+      .to.emit(this.shoyuEx, "NFTOrderFilled")
+      .withArgs(
+        sellOrder.direction,
+        sellOrder.maker,
+        this.bob.address,
+        sellOrder.nonce,
+        sellOrder.erc20Token,
+        sellOrder.erc20TokenAmount,
+        sellOrder.nftToken,
+        sellOrder.nftTokenId,
+        sellOrder.nftTokenAmount
+      )
+      .to.changeEtherBalance(this.alice, sellOrder.erc20TokenAmount);
     expect(await this.erc721.balanceOf(this.alice.address)).to.eq("0");
     expect(await this.erc721.balanceOf(this.bob.address)).to.eq("1");
     expect(await this.sushi.balanceOf(this.alice.address)).to.eq("0");
@@ -91,8 +106,8 @@ export function buyAndSwapNFT() {
     /* bob fills sell order and swaps SUSHI to ETH to fill order */
     await this.sushi.connect(this.bob).approve(this.shoyuEx.address, "5000");
 
-    await expect(() =>
-      this.shoyuEx.connect(this.bob).buyAndSwapNFT(
+    await expect(
+      await this.shoyuEx.connect(this.bob).buyAndSwapNFT(
         sellOrder, // LibNFTOrder
         sellOrderSignature, // LibSignature
         "1", // nftBuyAmount
@@ -105,7 +120,30 @@ export function buyAndSwapNFT() {
           },
         ] // SwapExactOutDetails
       )
-    ).to.changeEtherBalance(this.alice, sellOrder.erc20TokenAmount);
+    )
+      .to.emit(this.erc1155, "TransferSingle")
+      .withArgs(
+        this.zeroEx.address,
+        this.alice.address,
+        this.bob.address,
+        sellOrder.nftTokenId,
+        sellOrder.nftTokenAmount
+      )
+
+      .to.emit(this.shoyuEx, "NFTOrderFilled")
+      .withArgs(
+        sellOrder.direction,
+        sellOrder.maker,
+        this.bob.address,
+        sellOrder.nonce,
+        sellOrder.erc20Token,
+        sellOrder.erc20TokenAmount,
+        sellOrder.nftToken,
+        sellOrder.nftTokenId,
+        sellOrder.nftTokenAmount
+      )
+      .to.changeEtherBalance(this.alice, sellOrder.erc20TokenAmount);
+
     expect(
       await this.erc1155.balanceOf(this.alice.address, sellOrder.nftTokenId)
     ).to.eq("0");
@@ -154,8 +192,8 @@ export function buyAndSwapNFT() {
       .connect(this.bob)
       .approve(this.shoyuEx.address, MaxUint256);
 
-    await expect(() =>
-      this.shoyuEx.connect(this.bob).buyAndSwapNFT(
+    expect(
+      await this.shoyuEx.connect(this.bob).buyAndSwapNFT(
         sellOrder, // LibNFTOrder
         sellOrderSignature, // LibSignature
         "1", // nftBuyAmount
@@ -172,7 +210,23 @@ export function buyAndSwapNFT() {
           }, // pay 1/4 with erc20
         ] // SwapExactOutDetails
       )
-    ).to.changeEtherBalance(this.alice, sellOrder.erc20TokenAmount);
+    )
+      .to.emit(this.erc721, "Transfer")
+      .withArgs(this.alice.address, this.bob.address, sellOrder.nftTokenId)
+      .to.emit(this.shoyuEx, "NFTOrderFilled")
+      .withArgs(
+        sellOrder.direction,
+        sellOrder.maker,
+        this.bob.address,
+        sellOrder.nonce,
+        sellOrder.erc20Token,
+        sellOrder.erc20TokenAmount,
+        sellOrder.nftToken,
+        sellOrder.nftTokenId,
+        sellOrder.nftTokenAmount
+      )
+      .to.changeEtherBalance(this.alice, sellOrder.erc20TokenAmount);
+
     expect(await this.erc721.balanceOf(this.alice.address)).to.eq("0");
     expect(await this.sushi.balanceOf(this.alice.address)).to.eq("0");
     expect(await this.erc721.balanceOf(this.bob.address)).to.eq("1");

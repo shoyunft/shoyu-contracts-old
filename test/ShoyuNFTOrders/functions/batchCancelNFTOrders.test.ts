@@ -57,9 +57,15 @@ export function batchCancelNFTOrders() {
     const sellOrderERC1155Signature = await sellOrderERC1155.sign(this.alice);
 
     /* alice batch cancels sell orders */
-    await this.shoyuEx
-      .connect(this.alice)
-      .batchCancelNFTOrders([sellOrderERC721.nonce, sellOrderERC1155.nonce]);
+    await expect(
+      this.shoyuEx
+        .connect(this.alice)
+        .batchCancelNFTOrders([sellOrderERC721.nonce, sellOrderERC1155.nonce])
+    )
+      .to.emit(this.shoyuEx, "NFTOrderCancelled")
+      .withArgs(this.alice.address, sellOrderERC721.nonce)
+      .to.emit(this.shoyuEx, "NFTOrderCancelled")
+      .withArgs(this.alice.address, sellOrderERC1155.nonce);
 
     /* bob tries to fill sell orders and fails */
     await expect(
@@ -124,9 +130,15 @@ export function batchCancelNFTOrders() {
     const buyOrderERC1155Signature = await buyOrderERC1155.sign(this.alice);
 
     /* alice batch cancels buy orders */
-    await this.shoyuEx
-      .connect(this.alice)
-      .batchCancelNFTOrders([buyOrderERC721.nonce, buyOrderERC1155.nonce]);
+    await expect(
+      this.shoyuEx
+        .connect(this.alice)
+        .batchCancelNFTOrders([buyOrderERC721.nonce, buyOrderERC1155.nonce])
+    )
+      .to.emit(this.shoyuEx, "NFTOrderCancelled")
+      .withArgs(this.alice.address, buyOrderERC721.nonce)
+      .to.emit(this.shoyuEx, "NFTOrderCancelled")
+      .withArgs(this.alice.address, buyOrderERC1155.nonce);
 
     /* bob fills buy orders and fails */
     await this.erc721
@@ -205,9 +217,15 @@ export function batchCancelNFTOrders() {
     const sellOrderSignature = await sellOrder.sign(this.alice);
 
     // alice batch cancels orders
-    await this.shoyuEx
-      .connect(this.alice)
-      .batchCancelNFTOrders([buyOrder.nonce, sellOrder.nonce]);
+    await expect(
+      this.shoyuEx
+        .connect(this.alice)
+        .batchCancelNFTOrders([buyOrder.nonce, sellOrder.nonce])
+    )
+      .to.emit(this.shoyuEx, "NFTOrderCancelled")
+      .withArgs(this.alice.address, buyOrder.nonce)
+      .to.emit(this.shoyuEx, "NFTOrderCancelled")
+      .withArgs(this.alice.address, sellOrder.nonce);
 
     // bob tries to fill orders and fails
     await this.erc1155

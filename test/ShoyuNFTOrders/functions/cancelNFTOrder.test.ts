@@ -116,7 +116,11 @@ export function cancelNFTOrder() {
     const buyOrderSignature = await buyOrder.sign(this.alice);
 
     /* alice cancels buy order */
-    await this.shoyuEx.connect(this.alice).cancelNFTOrder(buyOrder.nonce);
+    await expect(
+      this.shoyuEx.connect(this.alice).cancelNFTOrder(buyOrder.nonce)
+    )
+      .to.emit(this.shoyuEx, "NFTOrderCancelled")
+      .withArgs(this.alice.address, buyOrder.nonce);
 
     /* bob fills buy order */
     await this.erc721
@@ -161,7 +165,11 @@ export function cancelNFTOrder() {
     const buyOrderSignature = await buyOrder.sign(this.alice);
 
     /* alice cancels buy order */
-    await this.shoyuEx.connect(this.alice).cancelNFTOrder(buyOrder.nonce);
+    await expect(
+      this.shoyuEx.connect(this.alice).cancelNFTOrder(buyOrder.nonce)
+    )
+      .to.emit(this.shoyuEx, "NFTOrderCancelled")
+      .withArgs(this.alice.address, buyOrder.nonce);
 
     /* bob tries to fill buy order and fails */
     await this.erc1155
@@ -176,7 +184,5 @@ export function cancelNFTOrder() {
         false // unwrap token
       )
     ).to.be.reverted;
-
-    expect(1).to.be.eq(1);
   });
 }

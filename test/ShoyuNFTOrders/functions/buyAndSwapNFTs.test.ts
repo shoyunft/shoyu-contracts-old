@@ -81,8 +81,8 @@ export function buyAndSwapNFTs() {
       .connect(this.bob)
       .approve(this.shoyuEx.address, MaxUint256);
 
-    await expect(() =>
-      this.shoyuEx.connect(this.bob).buyAndSwapNFTs(
+    await expect(
+      await this.shoyuEx.connect(this.bob).buyAndSwapNFTs(
         [sellOrderERC721, sellOrderERC1155], // LibNFTOrder
         [sellOrderERC721Signature, sellOrderERC1155Signature], // LibSignature
         [1, 2], // nftBuyAmount
@@ -98,13 +98,55 @@ export function buyAndSwapNFTs() {
         ], // SwapExactOutDetails
         true // revertIfIncomplete
       )
-    ).to.changeEtherBalances(
-      [this.alice, this.deployer],
-      [
-        sellOrderERC721.erc20TokenAmount.add(sellOrderERC1155.erc20TokenAmount),
-        sellOrderERC1155.fees[0].amount.add(sellOrderERC721.fees[0].amount),
-      ]
-    );
+    )
+      .to.emit(this.erc721, "Transfer")
+      .withArgs(
+        this.alice.address,
+        this.bob.address,
+        sellOrderERC721.nftTokenId
+      )
+      .to.emit(this.erc1155, "TransferSingle")
+      .withArgs(
+        this.zeroEx.address,
+        this.alice.address,
+        this.bob.address,
+        sellOrderERC1155.nftTokenId,
+        sellOrderERC1155.nftTokenAmount
+      )
+      .to.emit(this.shoyuEx, "NFTOrderFilled")
+      .withArgs(
+        sellOrderERC721.direction,
+        sellOrderERC721.maker,
+        this.bob.address,
+        sellOrderERC721.nonce,
+        sellOrderERC721.erc20Token,
+        sellOrderERC721.erc20TokenAmount,
+        sellOrderERC721.nftToken,
+        sellOrderERC721.nftTokenId,
+        sellOrderERC721.nftTokenAmount
+      )
+      .to.emit(this.shoyuEx, "NFTOrderFilled")
+      .withArgs(
+        sellOrderERC1155.direction,
+        sellOrderERC1155.maker,
+        this.bob.address,
+        sellOrderERC1155.nonce,
+        sellOrderERC1155.erc20Token,
+        sellOrderERC1155.erc20TokenAmount,
+        sellOrderERC1155.nftToken,
+        sellOrderERC1155.nftTokenId,
+        sellOrderERC1155.nftTokenAmount
+      )
+      .to.changeEtherBalances(
+        [this.alice, this.deployer],
+        [
+          sellOrderERC721.erc20TokenAmount.add(
+            sellOrderERC1155.erc20TokenAmount
+          ),
+          sellOrderERC1155.fees[0].amount.add(sellOrderERC721.fees[0].amount),
+        ]
+      );
+
     expect(await this.erc721.balanceOf(this.alice.address)).to.eq("0");
     expect(
       await this.erc1155.balanceOf(
@@ -195,13 +237,13 @@ export function buyAndSwapNFTs() {
       .add(sellOrderERC721.erc20TokenAmount)
       .add(sellOrderERC721.fees[0].amount);
 
-    /* bob fills sell order and swaps SUSHI and ERC20 to ETH to fill order */
+    /* bob fills sell order and pays with SUSHI & ETH to fill order */
     await this.sushi
       .connect(this.bob)
       .approve(this.shoyuEx.address, MaxUint256);
 
-    await expect(() =>
-      this.shoyuEx.connect(this.bob).buyAndSwapNFTs(
+    await expect(
+      await this.shoyuEx.connect(this.bob).buyAndSwapNFTs(
         [sellOrderERC721, sellOrderERC1155], // LibNFTOrder
         [sellOrderERC721Signature, sellOrderERC1155Signature], // LibSignature
         [1, 2], // nftBuyAmount
@@ -217,14 +259,56 @@ export function buyAndSwapNFTs() {
           value: totalAmount.div(2),
         }
       )
-    ).to.changeEtherBalances(
-      [this.alice, this.deployer, this.bob],
-      [
-        sellOrderERC721.erc20TokenAmount.add(sellOrderERC1155.erc20TokenAmount),
-        sellOrderERC1155.fees[0].amount.add(sellOrderERC721.fees[0].amount),
-        -totalAmount.div(2),
-      ]
-    );
+    )
+      .to.emit(this.erc721, "Transfer")
+      .withArgs(
+        this.alice.address,
+        this.bob.address,
+        sellOrderERC721.nftTokenId
+      )
+      .to.emit(this.erc1155, "TransferSingle")
+      .withArgs(
+        this.zeroEx.address,
+        this.alice.address,
+        this.bob.address,
+        sellOrderERC1155.nftTokenId,
+        sellOrderERC1155.nftTokenAmount
+      )
+      .to.emit(this.shoyuEx, "NFTOrderFilled")
+      .withArgs(
+        sellOrderERC721.direction,
+        sellOrderERC721.maker,
+        this.bob.address,
+        sellOrderERC721.nonce,
+        sellOrderERC721.erc20Token,
+        sellOrderERC721.erc20TokenAmount,
+        sellOrderERC721.nftToken,
+        sellOrderERC721.nftTokenId,
+        sellOrderERC721.nftTokenAmount
+      )
+      .to.emit(this.shoyuEx, "NFTOrderFilled")
+      .withArgs(
+        sellOrderERC1155.direction,
+        sellOrderERC1155.maker,
+        this.bob.address,
+        sellOrderERC1155.nonce,
+        sellOrderERC1155.erc20Token,
+        sellOrderERC1155.erc20TokenAmount,
+        sellOrderERC1155.nftToken,
+        sellOrderERC1155.nftTokenId,
+        sellOrderERC1155.nftTokenAmount
+      )
+      .to.changeEtherBalances(
+        [this.alice, this.deployer, this.bob],
+        [
+          sellOrderERC721.erc20TokenAmount.add(
+            sellOrderERC1155.erc20TokenAmount
+          ),
+          sellOrderERC1155.fees[0].amount.add(sellOrderERC721.fees[0].amount),
+          -totalAmount.div(2),
+        ]
+      );
+
     expect(await this.erc721.balanceOf(this.alice.address)).to.eq("0");
     expect(
       await this.erc1155.balanceOf(
@@ -313,8 +397,8 @@ export function buyAndSwapNFTs() {
       .add(sellOrderERC721.fees[0].amount);
 
     /* bob fills sell order with ETH */
-    await expect(() =>
-      this.shoyuEx.connect(this.bob).buyAndSwapNFTs(
+    await expect(
+      await this.shoyuEx.connect(this.bob).buyAndSwapNFTs(
         [sellOrderERC721, sellOrderERC1155], // LibNFTOrder
         [sellOrderERC721Signature, sellOrderERC1155Signature], // LibSignature
         [1, 2], // nftBuyAmount
@@ -324,14 +408,56 @@ export function buyAndSwapNFTs() {
           value: totalAmount,
         }
       )
-    ).to.changeEtherBalances(
-      [this.alice, this.deployer, this.bob],
-      [
-        sellOrderERC721.erc20TokenAmount.add(sellOrderERC1155.erc20TokenAmount),
-        sellOrderERC1155.fees[0].amount.add(sellOrderERC721.fees[0].amount),
-        -totalAmount,
-      ]
-    );
+    )
+      .to.emit(this.erc721, "Transfer")
+      .withArgs(
+        this.alice.address,
+        this.bob.address,
+        sellOrderERC721.nftTokenId
+      )
+      .to.emit(this.erc1155, "TransferSingle")
+      .withArgs(
+        this.zeroEx.address,
+        this.alice.address,
+        this.bob.address,
+        sellOrderERC1155.nftTokenId,
+        sellOrderERC1155.nftTokenAmount
+      )
+      .to.emit(this.shoyuEx, "NFTOrderFilled")
+      .withArgs(
+        sellOrderERC721.direction,
+        sellOrderERC721.maker,
+        this.bob.address,
+        sellOrderERC721.nonce,
+        sellOrderERC721.erc20Token,
+        sellOrderERC721.erc20TokenAmount,
+        sellOrderERC721.nftToken,
+        sellOrderERC721.nftTokenId,
+        sellOrderERC721.nftTokenAmount
+      )
+      .to.emit(this.shoyuEx, "NFTOrderFilled")
+      .withArgs(
+        sellOrderERC1155.direction,
+        sellOrderERC1155.maker,
+        this.bob.address,
+        sellOrderERC1155.nonce,
+        sellOrderERC1155.erc20Token,
+        sellOrderERC1155.erc20TokenAmount,
+        sellOrderERC1155.nftToken,
+        sellOrderERC1155.nftTokenId,
+        sellOrderERC1155.nftTokenAmount
+      )
+      .to.changeEtherBalances(
+        [this.alice, this.deployer, this.bob],
+        [
+          sellOrderERC721.erc20TokenAmount.add(
+            sellOrderERC1155.erc20TokenAmount
+          ),
+          sellOrderERC1155.fees[0].amount.add(sellOrderERC721.fees[0].amount),
+          -totalAmount,
+        ]
+      );
+
     expect(await this.erc721.balanceOf(this.alice.address)).to.eq("0");
     expect(
       await this.erc1155.balanceOf(
