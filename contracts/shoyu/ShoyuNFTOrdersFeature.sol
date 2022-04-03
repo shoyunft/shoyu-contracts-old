@@ -16,7 +16,9 @@ import "../0x/fixins/FixinERC1155Spender.sol";
 import "../0x/vendor/IFeeRecipient.sol";
 import "../0x/vendor/ITakerCallback.sol";
 import "../0x/errors/LibNFTOrdersRichErrors.sol";
-import "../sushiswap/uniswapv2/interfaces/IUniswapV2Router02.sol";
+import "../sushiswap/uniswapv2/interfaces/IUniswapV2Factory.sol";
+import "../sushiswap/uniswapv2/interfaces/IUniswapV2Pair.sol";
+import "../sushiswap/uniswapv2/libraries/UniswapV2Library.sol";
 import "./IShoyuNFTOrdersFeature.sol";
 import "./LibShoyuNFTOrder.sol";
 import "./LibShoyuNFTOrdersStorage.sol";
@@ -54,16 +56,16 @@ contract ShoyuNFTOrdersFeature is
   bytes4 private constant TAKER_CALLBACK_MAGIC_BYTES =
     ITakerCallback.zeroExTakerCallback.selector;
 
-  /// @dev The Sushiswap router contract;
-  IUniswapV2Router02 internal immutable SushiswapRouter;
+  /// @dev The Sushiswap factory contract;
+  address internal immutable sushiswapFactory;
 
   constructor(
-    address payable zeroExAddress,
-    IEtherTokenV06 weth,
-    IUniswapV2Router02 sushiswapRouter
-  ) public FixinEIP712(zeroExAddress) {
-    WETH = weth;
-    SushiswapRouter = sushiswapRouter;
+    address payable _zeroExAddress,
+    IEtherTokenV06 _weth,
+    address _sushiswapFactory
+  ) public FixinEIP712(_zeroExAddress) {
+    WETH = _weth;
+    sushiswapFactory = _sushiswapFactory;
   }
 
   struct SellParams {
@@ -200,16 +202,7 @@ contract ShoyuNFTOrdersFeature is
       )
     );
 
-    // TODO: is there some way to avoid this approval?
-    buyOrder.erc20Token.approve(address(SushiswapRouter), erc20FillAmount);
-
-    SushiswapRouter.swapExactTokensForTokens(
-      erc20FillAmount,
-      swapDetails.amountOutMin,
-      swapDetails.path,
-      msg.sender,
-      buyOrder.expiry
-    );
+    _swapExactTokensForTokens(erc20FillAmount, swapDetails.amountOutMin, swapDetails.path, msg.sender);
   }
 
   /// @dev Buys an NFT asset by filling the given order.
@@ -225,14 +218,14 @@ contract ShoyuNFTOrdersFeature is
   ) public payable override {
     uint256 ethBalanceBefore = address(this).balance.safeSub(msg.value);
 
-    _swapMultipleTokensForETH(swapDetails, block.timestamp);
+    uint256 ethAvailable = _swapMultipleTokensForExactETH(swapDetails);
 
     _buyNFT(
       sellOrder,
       signature,
       BuyParams(
         nftBuyAmount,
-        address(this).balance.safeSub(ethBalanceBefore) // Remaining ETH available
+        ethAvailable
       )
     );
 
@@ -276,7 +269,7 @@ contract ShoyuNFTOrdersFeature is
     uint256 ethBalanceBefore = address(this).balance.safeSub(msg.value);
 
     if (swapDetails.length > 0) {
-      _swapMultipleTokensForETH(swapDetails, block.timestamp);
+      _swapMultipleTokensForExactETH(swapDetails);
     }
 
     if (revertIfIncomplete) {
@@ -527,52 +520,6 @@ contract ShoyuNFTOrdersFeature is
       sellOrder.nftTokenId,
       params.buyAmount
     );
-  }
-
-  function _swapMultipleTokensForETH(
-    LibShoyuNFTOrder.SwapExactOutDetails[] memory swapDetails,
-    uint256 expiry
-  ) internal returns (uint256 amountOut) {
-    amountOut = 0;
-
-    for (uint256 i = 0; i < swapDetails.length; i++) {
-      uint256[] memory amounts = SushiswapRouter.getAmountsIn(
-        swapDetails[i].amountOut,
-        swapDetails[i].path
-      );
-
-      require(
-        amounts[0] <= swapDetails[i].amountInMax,
-        "ShoyuNFTOrders::_swapMultipleTokensForETH/INSUFFICIENT_FUNDS"
-      );
-
-      // Transfer the ERC20 from the maker to the Exchange Proxy
-      // so we can swap it before sending it to the seller.
-      // TODO: Probably safe to just use ERC20.transferFrom for some
-      //       small gas savings
-      _transferERC20TokensFrom(
-        IERC20TokenV06(swapDetails[i].path[0]),
-        msg.sender,
-        address(this),
-        amounts[0]
-      );
-
-      // TODO: is there some way to avoid this approval?
-      IERC20TokenV06(swapDetails[i].path[0]).approve(
-        address(SushiswapRouter),
-        amounts[0]
-      );
-
-      SushiswapRouter.swapTokensForExactETH(
-        swapDetails[i].amountOut,
-        swapDetails[i].amountInMax,
-        swapDetails[i].path,
-        address(this),
-        expiry
-      );
-
-      amountOut = amountOut.safeAdd(amounts[amounts.length - 1]);
-    }
   }
 
   /// @dev Checks whether the given signature is valid for the
@@ -996,6 +943,85 @@ contract ShoyuNFTOrdersFeature is
       _transferERC721AssetFrom(IERC721Token(token), from, to, tokenId);
     } else {
       _transferERC1155AssetFrom(IERC1155Token(token), from, to, tokenId, amount);
+    }
+  }
+
+  // Transfers token from `msg.sender` and swaps for ETH, specifying
+  // `this` as the receiver
+  function _swapMultipleTokensForExactETH(
+    LibShoyuNFTOrder.SwapExactOutDetails[] memory swapDetails
+  ) internal returns (uint256 amountOut) {
+    for (uint256 i = 0; i < swapDetails.length; i++) {
+      uint256[] memory amounts = UniswapV2Library.getAmountsIn(
+        sushiswapFactory,
+        swapDetails[i].amountOut,
+        swapDetails[i].path
+      );
+
+      require(
+        amounts[0] <= swapDetails[i].amountInMax,
+        "ShoyuNFTOrders::_swapMultipleTokensForExactETH/EXCESSIVE_AMOUNT_IN"
+      );
+
+      // Transfer the ERC20 from the maker to the token pair
+      _transferERC20TokensFrom(
+        IERC20TokenV06(swapDetails[i].path[0]),
+        msg.sender,
+        UniswapV2Library.pairFor(
+          sushiswapFactory,
+          swapDetails[i].path[0],
+          swapDetails[i].path[1]
+        ),
+        amounts[0]
+      );
+
+      _swap(amounts, swapDetails[i].path, address(this));
+
+      amountOut = amountOut.safeAdd(amounts[amounts.length - 1]);
+    }
+
+    WETH.withdraw(amountOut);
+  }
+
+  // Swaps an exact amount of tokens for another token through the path passed as an argument
+  // Returns the amount of the final token
+  function _swapExactTokensForTokens(
+    uint256 amountIn,
+    uint256 amountOutMin,
+    address[] memory path,
+    address to
+  ) internal returns (uint256 amountOut) {
+    uint256[] memory amounts = UniswapV2Library.getAmountsOut(sushiswapFactory, amountIn, path);
+    amountOut = amounts[amounts.length - 1];
+    require(amountOut >= amountOutMin, "ShoyuNFTOrders::_swapExactTokensForTokens/INSUFFICIENT_AMOUNT_OUT");
+    _transferERC20Tokens(
+      IERC20TokenV06(path[0]),
+      UniswapV2Library.pairFor(sushiswapFactory, path[0], path[1]),
+      amountIn
+    );
+    _swap(amounts, path, to);
+  }
+
+  // requires the initial amount to have already been sent to the first pair
+  function _swap(
+    uint256[] memory amounts,
+    address[] memory path,
+    address _to
+  ) internal virtual {
+    for (uint256 i; i < path.length - 1; i++) {
+      (address input, address output) = (path[i], path[i + 1]);
+      (address token0, ) = UniswapV2Library.sortTokens(input, output);
+      uint256 amountOut = amounts[i + 1];
+      (uint256 amount0Out, uint256 amount1Out) = input == token0
+        ? (uint256(0), amountOut)
+        : (amountOut, uint256(0));
+      address to = i < path.length - 2 ? UniswapV2Library.pairFor(sushiswapFactory, output, path[i + 2]) : _to;
+      IUniswapV2Pair(UniswapV2Library.pairFor(sushiswapFactory, input, output)).swap(
+        amount0Out,
+        amount1Out,
+        to,
+        new bytes(0)
+      );
     }
   }
 }

@@ -28,11 +28,11 @@ const deployFunction: DeployFunction = async function ({
 
   const zeroExContract = await deployments.get("ZeroEx");
 
-  const sushiswapRouter = await deployments.get("UniswapV2Router02");
+  const sushiswapFactory = await deployments.get("UniswapV2Factory");
 
   const shoyuNFTOrdersFeature = await deploy("ShoyuNFTOrdersFeature", {
     from: deployer,
-    args: [zeroExContract.address, wethAddress, sushiswapRouter.address],
+    args: [zeroExContract.address, wethAddress, sushiswapFactory.address],
   });
 
   const shoyuNFTOrdersFeatureContract = await ethers.getContractAt(
