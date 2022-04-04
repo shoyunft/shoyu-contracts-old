@@ -43,7 +43,7 @@ const config: HardhatUserConfig = {
     alphaSort: true,
     disambiguatePaths: false,
     runOnCompile: true,
-    strict: true,
+    // strict: true,
     only: [
       ":ShoyuNFTOrdersFeature$",
       ":ShoyuNFTBuyOrdersFeature$",
@@ -127,13 +127,7 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 1000000,
-            details: {
-              yul: false,
-              deduplicate: true,
-              cse: true,
-              constantOptimizer: true,
-            },
+            runs: 200,
           },
         },
       },

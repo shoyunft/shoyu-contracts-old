@@ -1,6 +1,13 @@
 import { ethers, deployments } from "hardhat";
+import { BigNumberish, Contract } from "ethers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-async function transfer(signer, token, amount) {
+async function transfer(
+  signer: SignerWithAddress,
+  token: Contract,
+  amount: BigNumberish
+) {
   const WETH = await ethers.getContract("WETH9Mock");
 
   if (token.address === WETH.address) {
@@ -8,6 +15,13 @@ async function transfer(signer, token, amount) {
   } else {
     await token.transfer(signer.address, amount);
   }
+}
+
+interface Pair {
+  token0: Contract;
+  token0Amount: BigNumberish;
+  token1: Contract;
+  token1Amount: BigNumberish;
 }
 
 export const seedSushiswapPools = deployments.createFixture(
@@ -18,12 +32,16 @@ export const seedSushiswapPools = deployments.createFixture(
         getNamedSigners,
         constants: { MaxUint256 },
       },
-    },
-    { pairs }
+    }: HardhatRuntimeEnvironment,
+    options: { pairs: Pair[] } | undefined
   ) => {
     await deployments.fixture(["ShoyuFeatures"], {
       keepExistingDeployments: true,
     });
+
+    if (!options) return;
+
+    const { pairs } = options;
 
     const { deployer } = await getNamedSigners();
 
