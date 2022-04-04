@@ -1,11 +1,11 @@
 pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
-import "../0x/storage/LibStorage.sol";
+import "../../0x/storage/LibStorage.sol";
 
 // TODO: is there a better storage solution?
 
-/// @dev Storage helpers for `ShoyuNFTOrdersFeature`.
+/// @dev Storage helpers for `ShoyuNFTOrders`.
 library LibShoyuNFTOrdersStorage {
   struct OrderState {
     // The amount (denominated in the NFT asset)

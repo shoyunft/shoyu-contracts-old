@@ -21,7 +21,7 @@ export const seedSushiswapPools = deployments.createFixture(
     },
     { pairs }
   ) => {
-    await deployments.fixture(["ShoyuNFTOrdersFeature"], {
+    await deployments.fixture(["ShoyuFeatures"], {
       keepExistingDeployments: true,
     });
 

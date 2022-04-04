@@ -2,10 +2,13 @@ pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
 import "@0x/contracts-erc20/contracts/src/v06/IERC20TokenV06.sol";
-import "../0x/vendor/IPropertyValidator.sol";
+import "../../0x/vendor/IPropertyValidator.sol";
 
 /// @dev A library for common NFT order operations.
 library LibShoyuNFTOrder {
+  address internal constant NATIVE_TOKEN_ADDRESS =
+    0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+
   enum OrderStatus {
     INVALID,
     FILLABLE,

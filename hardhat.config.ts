@@ -44,7 +44,11 @@ const config: HardhatUserConfig = {
     disambiguatePaths: false,
     runOnCompile: true,
     strict: true,
-    only: [":ShoyuNFTOrdersFeature$"],
+    only: [
+      ":ShoyuNFTOrdersFeature$",
+      ":ShoyuNFTBuyOrdersFeature$",
+      ":ShoyuNFTSellOrdersFeature$",
+    ],
   },
   defaultNetwork: "hardhat",
   etherscan: {

@@ -49,7 +49,7 @@ describe("ShoyuNFTOrders", function () {
     await this.erc1155.deployed();
 
     /* get deployed contracts */
-    await deployments.fixture(["ShoyuNFTOrdersFeature"]);
+    await deployments.fixture(["ShoyuFeatures"]);
     this.sushiswapFactory = await ethers.getContract("UniswapV2Factory");
     this.sushiswapRouter = await ethers.getContract("UniswapV2Router02");
     this.zeroEx = await ethers.getContract("ZeroEx");
