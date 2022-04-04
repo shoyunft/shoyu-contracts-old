@@ -10,6 +10,7 @@ import {
   cancelNFTOrder,
   batchCancelNFTOrders,
   buyNFT,
+  buyNFTs,
   sellNFT,
 } from "./functions";
 
@@ -78,10 +79,11 @@ describe("ShoyuNFTOrders", function () {
   });
 
   describe("buyNFT", buyNFT.bind(this));
-  describe("sellNFT", sellNFT.bind(this));
-  describe("sellAndSwapNFT", sellAndSwapNFT.bind(this));
+  describe("buyNFTs", buyNFTs.bind(this));
   describe("buyAndSwapNFT", buyAndSwapNFT.bind(this));
   describe("buyAndSwapNFTs", buyAndSwapNFTs.bind(this));
+  describe("sellNFT", sellNFT.bind(this));
+  describe("sellAndSwapNFT", sellAndSwapNFT.bind(this));
   describe("cancelNFTOrder", cancelNFTOrder.bind(this));
   describe("batchCancelNFTOrders", batchCancelNFTOrders.bind(this));
 });

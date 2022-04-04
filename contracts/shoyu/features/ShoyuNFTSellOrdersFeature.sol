@@ -60,6 +60,7 @@ contract ShoyuNFTSellOrdersFeature is
   /// @return success `LibMigrate.SUCCESS` on success.
   function migrate() external returns (bytes4 success) {
     _registerFeatureFunction(this.buyNFT.selector);
+    _registerFeatureFunction(this.buyNFTs.selector);
     _registerFeatureFunction(this.buyAndSwapNFT.selector);
     _registerFeatureFunction(this.buyAndSwapNFTs.selector);
     return LibMigrate.MIGRATE_SUCCESS;
@@ -78,8 +79,8 @@ contract ShoyuNFTSellOrdersFeature is
     override
     payable
   {
-    uint256 ethBalanceBefore = address(this).balance
-      .safeSub(msg.value);
+    uint256 ethBalanceBefore = address(this).balance.safeSub(msg.value);
+
     _buyNFT(
       sellOrder,
       signature,
@@ -88,7 +89,9 @@ contract ShoyuNFTSellOrdersFeature is
         msg.value
       )
     );
+
     uint256 ethBalanceAfter = address(this).balance;
+
     // Cannot use pre-existing ETH balance
     if (ethBalanceAfter < ethBalanceBefore) {
       LibNFTOrdersRichErrors.OverspentEthError(
@@ -96,6 +99,44 @@ contract ShoyuNFTSellOrdersFeature is
         msg.value
       ).rrevert();
     }
+
+    // Refund
+    _transferEth(msg.sender, ethBalanceAfter - ethBalanceBefore);
+  }
+
+  /// @dev Buys NFT assets by filling the given orders.
+  /// @param sellOrders The NFT sell orders.
+  /// @param signatures The order signatures.
+  /// @param nftBuyAmounts The amount of the NFT asset to buy.
+  /// @param revertIfIncomplete If true, reverts if this
+  ///        function fails to fill any individual order.
+  /// @return successes An array of booleans corresponding to whether
+  ///         each order in `orders` was successfully filled.
+  function buyNFTs(
+    LibShoyuNFTOrder.NFTOrder[] memory sellOrders,
+    LibSignature.Signature[] memory signatures,
+    uint128[] memory nftBuyAmounts,
+    bool revertIfIncomplete
+  ) public payable override returns (bool[] memory successes) {
+    uint256 ethBalanceBefore = address(this).balance.safeSub(msg.value);
+
+    successes = _buyNFTs(
+      sellOrders,
+      signatures,
+      nftBuyAmounts,
+      revertIfIncomplete,
+      ethBalanceBefore
+    );
+
+    // Cannot use pre-existing ETH balance
+    uint256 ethBalanceAfter = address(this).balance;
+    if (ethBalanceAfter < ethBalanceBefore) {
+        LibNFTOrdersRichErrors.OverspentEthError(
+            msg.value + (ethBalanceBefore - ethBalanceAfter),
+            msg.value
+        ).rrevert();
+    }
+
     // Refund
     _transferEth(msg.sender, ethBalanceAfter - ethBalanceBefore);
   }
@@ -146,6 +187,7 @@ contract ShoyuNFTSellOrdersFeature is
         )
         .rrevert();
     }
+  
     // Refund
     _transferEth(msg.sender, ethBalanceAfter - ethBalanceBefore);
   }
@@ -166,13 +208,6 @@ contract ShoyuNFTSellOrdersFeature is
     LibShoyuNFTOrder.SwapExactOutDetails[] memory swapDetails,
     bool revertIfIncomplete
   ) public payable override returns (bool[] memory successes) {
-    require(
-      sellOrders.length == signatures.length &&
-      sellOrders.length == nftBuyAmounts.length,
-      "buyAndSwapNFTs/ARRAY_LENGTH_MISMATCH"
-    );
-    successes = new bool[](sellOrders.length);
-
     uint256 ethBalanceBefore = address(this).balance.safeSub(msg.value);
 
     // Transfers token from `msg.sender` and swaps for ETH
@@ -189,37 +224,13 @@ contract ShoyuNFTSellOrdersFeature is
     }
     WETH.withdraw(ethAvailable);
 
-    if (revertIfIncomplete) {
-      for (uint256 i = 0; i < sellOrders.length; i++) {
-        // Will revert if _buyNFT reverts.
-        _buyNFT(
-          sellOrders[i],
-          signatures[i],
-          BuyParams(
-            nftBuyAmounts[i],
-            address(this).balance.safeSub(ethBalanceBefore) // Remaining ETH available
-          )
-        );
-      }
-    } else {
-      for (uint256 i = 0; i < sellOrders.length; i++) {
-        // Delegatecall `_buyNFT` to catch swallow reverts while
-        // preserving execution context.
-        // Note that `_buyNFT` is a public function but should _not_
-        // be registered in the Exchange Proxy.
-        (successes[i], ) = _implementation.delegatecall(
-          abi.encodeWithSelector(
-            this._buyNFT.selector,
-            sellOrders[i],
-            signatures[i],
-            BuyParams(
-              nftBuyAmounts[i],
-              address(this).balance.safeSub(ethBalanceBefore) // Remaining ETH available
-            )
-          )
-        );
-      }
-    }
+    successes = _buyNFTs(
+      sellOrders,
+      signatures,
+      nftBuyAmounts,
+      revertIfIncomplete,
+      ethBalanceBefore
+    );
     
     // Cannot use pre-existing ETH balance
     uint256 ethBalanceAfter = address(this).balance;
@@ -298,6 +309,55 @@ contract ShoyuNFTSellOrdersFeature is
       sellOrder.nftTokenId,
       params.buyAmount
     );
+  }
+
+  // Logic for batch filling sell orders
+  function _buyNFTs(
+    LibShoyuNFTOrder.NFTOrder[] memory sellOrders,
+    LibSignature.Signature[] memory signatures,
+    uint128[] memory nftBuyAmounts,
+    bool revertIfIncomplete,
+    uint256 ethBalanceBefore
+  ) internal returns (bool[] memory successes) {
+    require(
+      sellOrders.length == signatures.length &&
+      sellOrders.length == nftBuyAmounts.length,
+      "_buyNFTs/ARRAY_LENGTH_MISMATCH"
+    );
+
+    successes = new bool[](sellOrders.length);
+
+    if (revertIfIncomplete) {
+      for (uint256 i = 0; i < sellOrders.length; i++) {
+        // Will revert if _buyNFT reverts.
+        _buyNFT(
+          sellOrders[i],
+          signatures[i],
+          BuyParams(
+            nftBuyAmounts[i],
+            address(this).balance.safeSub(ethBalanceBefore) // Remaining ETH available
+          )
+        );
+      }
+    } else {
+      for (uint256 i = 0; i < sellOrders.length; i++) {
+        // Delegatecall `_buyNFT` to catch swallow reverts while
+        // preserving execution context.
+        // Note that `_buyNFT` is a public function but should _not_
+        // be registered in the Exchange Proxy.
+        (successes[i], ) = _implementation.delegatecall(
+          abi.encodeWithSelector(
+            this._buyNFT.selector,
+            sellOrders[i],
+            signatures[i],
+            BuyParams(
+              nftBuyAmounts[i],
+              address(this).balance.safeSub(ethBalanceBefore) // Remaining ETH available
+            )
+          )
+        );
+      }
+    }
   }
 
   function _validateSellOrder(
