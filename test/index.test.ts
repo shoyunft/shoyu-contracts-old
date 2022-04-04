@@ -2,7 +2,7 @@ import { ethers, deployments } from "hardhat";
 import { use } from "chai";
 import { solidity } from "ethereum-waffle";
 
-import { seedSushiswapPools } from "../fixtures";
+import { seedSushiswapPools } from "./fixtures";
 import {
   sellAndSwapNFT,
   buyAndSwapNFT,

@@ -1,12 +1,8 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 
-import {
-  NFTOrder,
-  NFTStandard,
-  TradeDirection,
-} from "../../../utils/nft_orders";
-import { ETH_TOKEN_ADDRESS } from "../../../utils/constants";
+import { NFTOrder, NFTStandard, TradeDirection } from "../../utils/nft_orders";
+import { ETH_TOKEN_ADDRESS } from "../../utils/constants";
 
 import { expect } from "chai";
 
