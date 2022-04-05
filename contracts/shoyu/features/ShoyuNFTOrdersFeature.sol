@@ -9,7 +9,7 @@ import "../interfaces/IShoyuNFTOrdersFeature.sol";
 import "../interfaces/IShoyuNFTOrderEvents.sol";
 import "../libraries/LibShoyuNFTOrder.sol";
 import "../libraries/LibShoyuNFTOrdersStorage.sol";
-import "../helpers/ShoyuNFTOrders.sol";
+import "../fixins/ShoyuNFTOrders.sol";
 
 /// @dev Feature for interacting with Shoyu NFT orders.
 contract ShoyuNFTOrdersFeature is

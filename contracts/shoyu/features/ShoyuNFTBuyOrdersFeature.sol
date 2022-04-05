@@ -14,9 +14,9 @@ import "../interfaces/IShoyuNFTBuyOrdersFeature.sol";
 import "../interfaces/IShoyuNFTOrderEvents.sol";
 import "../libraries/LibShoyuNFTOrder.sol";
 import "../libraries/LibShoyuNFTOrdersStorage.sol";
-import "../helpers/ShoyuSwapper.sol";
-import "../helpers/ShoyuNFTOrders.sol";
-import "../helpers/ShoyuSpender.sol";
+import "../fixins/ShoyuSwapper.sol";
+import "../fixins/ShoyuNFTBuyOrders.sol";
+import "../fixins/ShoyuSpender.sol";
 
 /// @dev Feature for interacting with Shoyu NFT orders.
 contract ShoyuNFTBuyOrdersFeature is
@@ -25,9 +25,9 @@ contract ShoyuNFTBuyOrdersFeature is
   IShoyuNFTOrderEvents,
   FixinCommon,
   FixinTokenSpender,
-  ShoyuSwapper,
-  ShoyuNFTOrders,
-  ShoyuSpender
+  ShoyuNFTBuyOrders,
+  ShoyuSpender,
+  ShoyuSwapper
 {
   using LibSafeMathV06 for uint256;
   using LibSafeMathV06 for uint128;
@@ -51,7 +51,7 @@ contract ShoyuNFTBuyOrdersFeature is
     address _factory,
     bytes32 _pairCodeHash
   ) public
-    ShoyuNFTOrders(_zeroExAddress)
+    ShoyuNFTBuyOrders(_zeroExAddress)
     ShoyuSpender(_weth)
     ShoyuSwapper(_factory, _pairCodeHash)
   {}
@@ -243,49 +243,5 @@ contract ShoyuNFTBuyOrdersFeature is
       params.tokenId,
       buyOrder.nftTokenAmount
     );
-  }
-
-  function _validateBuyOrder(
-    LibShoyuNFTOrder.NFTOrder memory buyOrder,
-    LibSignature.Signature memory signature,
-    LibShoyuNFTOrder.OrderInfo memory orderInfo,
-    address taker,
-    uint256 tokenId
-  ) internal view {
-    // Order must be buying the NFT asset.
-    require(
-      buyOrder.direction == LibShoyuNFTOrder.TradeDirection.BUY_NFT,
-      "_validateBuyOrder::WRONG_TRADE_DIRECTION"
-    );
-
-    // The ERC20 token cannot be ETH.
-    require(
-      address(buyOrder.erc20Token) != LibShoyuNFTOrder.NATIVE_TOKEN_ADDRESS,
-      "_validateBuyOrder::NATIVE_TOKEN_NOT_ALLOWED"
-    );
-
-    // Taker must match the order taker, if one is specified.
-    if (buyOrder.taker != address(0) && buyOrder.taker != taker) {
-      LibNFTOrdersRichErrors.OnlyTakerError(taker, buyOrder.taker).rrevert();
-    }
-
-    // Check that the order is valid and has not expired, been cancelled,
-    // or been filled.
-    if (orderInfo.status != LibShoyuNFTOrder.OrderStatus.FILLABLE) {
-      LibNFTOrdersRichErrors
-        .OrderNotFillableError(
-          buyOrder.maker,
-          buyOrder.nonce,
-          uint8(orderInfo.status)
-        )
-        .rrevert();
-    }
-
-    // Check that the asset with the given token ID satisfies the properties
-    // specified by the order.
-    _validateOrderProperties(buyOrder, tokenId);
-
-    // Check the signature.
-    _validateOrderSignature(orderInfo.orderHash, signature, buyOrder.maker);
   }
 }
