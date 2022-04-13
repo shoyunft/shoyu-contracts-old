@@ -1,8 +1,6 @@
-import { getContractFactory } from "@nomiclabs/hardhat-ethers/dist/src/types";
 import { INIT_CODE_HASH, WNATIVE_ADDRESS } from "@sushiswap/core-sdk";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { keccak256 } from "@ethersproject/solidity";
 
 const deployFunction: DeployFunction = async function ({
   ethers,
@@ -102,6 +100,23 @@ const deployFunction: DeployFunction = async function ({
   await migrator.migrate(
     shoyuNFTBuyOrdersFeature.address,
     shoyuNFTBuyOrdersFeatureContract.interface.encodeFunctionData("migrate"),
+    deployer
+  );
+
+  // deploy ShoyuNFTTransferFeature
+  const shoyuNFTTransferFeature = await deploy("ShoyuNFTTransferFeature", {
+    from: deployer,
+    args: [wethAddress],
+  });
+
+  const shoyuNFTTransferFeatureContract = await ethers.getContractAt(
+    "ShoyuNFTTransferFeature",
+    shoyuNFTTransferFeature.address
+  );
+
+  await migrator.migrate(
+    shoyuNFTTransferFeature.address,
+    shoyuNFTTransferFeatureContract.interface.encodeFunctionData("migrate"),
     deployer
   );
 

@@ -48,6 +48,7 @@ const config: HardhatUserConfig = {
       ":ShoyuNFTOrdersFeature$",
       ":ShoyuNFTBuyOrdersFeature$",
       ":ShoyuNFTSellOrdersFeature$",
+      ":ShoyuNFTTransferFeature$",
     ],
   },
   defaultNetwork: "hardhat",

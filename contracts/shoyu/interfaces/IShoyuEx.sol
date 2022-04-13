@@ -6,6 +6,7 @@ import "../../0x/features/interfaces/ISimpleFunctionRegistryFeature.sol";
 import "./IShoyuNFTOrdersFeature.sol";
 import "./IShoyuNFTBuyOrdersFeature.sol";
 import "./IShoyuNFTSellOrdersFeature.sol";
+import "./IShoyuNFTTransferFeature.sol";
 import "./IShoyuNFTOrderEvents.sol";
 
 /// @dev Interface for Shoyu Exchange Proxy.
@@ -15,6 +16,7 @@ interface IShoyuEx is
     IShoyuNFTOrdersFeature,
     IShoyuNFTBuyOrdersFeature,
     IShoyuNFTSellOrdersFeature,
+    IShoyuNFTTransferFeature,
     IShoyuNFTOrderEvents
 {
     /// @dev Fallback for just receiving ether.
