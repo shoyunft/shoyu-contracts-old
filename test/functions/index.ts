@@ -6,4 +6,6 @@ export * from "./batchCancelNFTOrders.test";
 export * from "./buyNFT.test";
 export * from "./buyNFTs.test";
 export * from "./sellNFT.test";
-export * from "./batchTransferNFTs";
+export * from "./batchTransferNFTs.test";
+export * from "./getNFTOrderHash.test";
+export * from "./validateNFTOrderSignature.test";

@@ -13,6 +13,8 @@ import {
   buyNFTs,
   sellNFT,
   batchTransferNFTs,
+  getNFTOrderHash,
+  validateNFTOrderSignature,
 } from "./functions";
 
 use(solidity);
@@ -88,4 +90,6 @@ describe("ShoyuNFTOrders", function () {
   describe("cancelNFTOrder", cancelNFTOrder.bind(this));
   describe("batchCancelNFTOrders", batchCancelNFTOrders.bind(this));
   describe("batchTransferNFTs", batchTransferNFTs.bind(this));
+  describe("getNFTOrderHash", getNFTOrderHash.bind(this));
+  describe("validateNFTOrderSignature", validateNFTOrderSignature.bind(this));
 });
