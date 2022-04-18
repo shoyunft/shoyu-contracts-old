@@ -1,5 +1,5 @@
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, MaxUint256 } from "@ethersproject/constants";
 
 import { NFTOrder, NFTStandard, TradeDirection } from "../../utils/nft_orders";
 
@@ -12,7 +12,9 @@ export function sellNFT() {
 
     /* alice creates a buy order for bob's ERC7221 */
     const offerAmount = BigNumber.from("5000");
-    await this.weth.connect(this.alice).approve(this.shoyuEx.address, "50000");
+    await this.weth
+      .connect(this.alice)
+      .approve(this.shoyuEx.address, MaxUint256);
     const buyOrder = new NFTOrder({
       chainId: 31337,
       verifyingContract: this.shoyuEx.address,
@@ -87,7 +89,9 @@ export function sellNFT() {
 
     /* alice creates a buy order for bob's ERC7221 */
     const offerAmount = BigNumber.from("5000");
-    await this.weth.connect(this.alice).approve(this.shoyuEx.address, "50000");
+    await this.weth
+      .connect(this.alice)
+      .approve(this.shoyuEx.address, MaxUint256);
     const buyOrder = new NFTOrder({
       chainId: 31337,
       verifyingContract: this.shoyuEx.address,

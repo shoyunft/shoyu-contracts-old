@@ -376,4 +376,70 @@ export function buyNFTs() {
       )
     ).to.eq("2");
   });
+
+  it("Reverts if arrays are different lengths", async function () {
+    await this.erc721.mint(this.alice.address, "420");
+    await this.erc1155.mint(this.alice.address, "42069", 2);
+
+    /* alice creates sell orders for nfts */
+    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "420");
+    await this.erc1155
+      .connect(this.alice)
+      .setApprovalForAll(this.shoyuEx.address, "true");
+
+    const sellPriceERC721 = BigNumber.from("420");
+    const sellPriceERC1155 = BigNumber.from("100");
+
+    const sellOrderERC721 = new NFTOrder({
+      chainId: 31337,
+      verifyingContract: this.shoyuEx.address,
+      direction: TradeDirection.SellNFT,
+      erc20Token: ETH_TOKEN_ADDRESS,
+      erc20TokenAmount: sellPriceERC721,
+      nftStandard: NFTStandard.ERC721,
+      nftToken: this.erc721.address,
+      nftTokenId: BigNumber.from(420),
+      nftTokenAmount: BigNumber.from(1),
+      maker: this.alice.address,
+      taker: AddressZero,
+      nonce: BigNumber.from(Date.now()),
+      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
+    });
+
+    const sellOrderERC1155 = new NFTOrder({
+      chainId: 31337,
+      verifyingContract: this.shoyuEx.address,
+      direction: TradeDirection.SellNFT,
+      erc20Token: ETH_TOKEN_ADDRESS,
+      erc20TokenAmount: sellPriceERC1155,
+      nftStandard: NFTStandard.ERC1155,
+      nftToken: this.erc1155.address,
+      nftTokenId: BigNumber.from(42069),
+      nftTokenAmount: BigNumber.from(2),
+      maker: this.alice.address,
+      taker: AddressZero,
+      nonce: BigNumber.from(Date.now()),
+      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
+    });
+
+    const sellOrderERC721Signature = await sellOrderERC721.sign(this.alice);
+    const sellOrderERC1155Signature = await sellOrderERC1155.sign(this.alice);
+
+    const totalAmount = sellOrderERC1155.erc20TokenAmount.add(
+      sellOrderERC721.erc20TokenAmount
+    );
+
+    /* bob calls buyNFTs with only one signature */
+    await expect(
+      this.shoyuEx.connect(this.bob).buyNFTs(
+        [sellOrderERC721, sellOrderERC1155], // LibNFTOrder
+        [sellOrderERC721Signature], // LibSignature
+        [1, 2], // nftBuyAmount
+        true, // revertIfIncomplete
+        {
+          value: totalAmount,
+        }
+      )
+    ).to.be.reverted;
+  });
 }
