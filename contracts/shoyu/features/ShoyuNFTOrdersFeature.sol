@@ -35,7 +35,7 @@ contract ShoyuNFTOrdersFeature is
   /// @return success `LibMigrate.SUCCESS` on success.
   function migrate() external returns (bytes4 success) {
     _registerFeatureFunction(this.validateNFTOrderSignature.selector);
-    _registerFeatureFunction(this.validateNFTOrderProperties.selector);
+    _registerFeatureFunction(this.validateTokenIdMerkleProof.selector);
     _registerFeatureFunction(this.getNFTOrderInfo.selector);
     _registerFeatureFunction(this.getNFTOrderHash.selector);
     _registerFeatureFunction(this.cancelNFTOrder.selector);
@@ -125,10 +125,11 @@ contract ShoyuNFTOrdersFeature is
   ///      an NFT asset.
   /// @param order The NFT order.
   /// @param nftTokenId The ID of the NFT asset.
-  function validateNFTOrderProperties(
+  function validateTokenIdMerkleProof(
     LibShoyuNFTOrder.NFTOrder memory order,
-    uint256 nftTokenId
+    uint256 nftTokenId,
+    bytes32[] memory tokenIdMerkleProof
   ) public override view {
-    _validateOrderProperties(order, nftTokenId);
+    _validateTokenIdMerkleProof(order, nftTokenId, tokenIdMerkleProof);
   }
 }

@@ -3,9 +3,11 @@ import { SupportedProvider } from "@0x/subproviders";
 import { EIP712TypedData } from "@0x/types";
 import { hexUtils } from "@0x/utils";
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero, Zero } from "@ethersproject/constants";
+import { AddressZero, Zero, HashZero } from "@ethersproject/constants";
 import { splitSignature } from "@ethersproject/bytes";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
+import MerkleTree from "merkletreejs";
+import { arrayify, keccak256, solidityKeccak256 } from "ethers/lib/utils";
 
 import {
   createExchangeProxyEIP712Domain,
@@ -45,11 +47,6 @@ interface Fee {
   feeData: string;
 }
 
-interface Property {
-  propertyValidator: string;
-  propertyData: string;
-}
-
 interface OrderSignature {
   v: number;
   r: string;
@@ -69,8 +66,9 @@ const NFT_ORDER_DEFAULT_VALUES = {
   nftStandard: NFTStandard.ERC721,
   nftToken: AddressZero,
   nftTokenId: Zero,
-  nftTokenProperties: [] as Property[],
+  nftTokenIds: [],
   nftTokenAmount: Zero,
+  nftTokenIdsMerkleRoot: HashZero,
   chainId: 1,
   verifyingContract: getContractAddressesForChainOrThrow(1).exchangeProxy,
 };
@@ -90,9 +88,9 @@ export class NFTOrder {
     { type: "Fee[]", name: "fees" },
     { type: "address", name: "nftToken" },
     { type: "uint256", name: "nftTokenId" },
-    { type: "Property[]", name: "nftTokenProperties" },
     { type: "uint128", name: "nftTokenAmount" },
     { type: "uint8", name: "nftStandard" },
+    { type: "bytes32", name: "nftTokenIdsMerkleRoot" },
   ];
 
   public static readonly FEE_ABI = [
@@ -100,23 +98,14 @@ export class NFTOrder {
     { type: "uint256", name: "amount" },
     { type: "bytes", name: "feeData" },
   ];
-  public static readonly PROPERTY_ABI = [
-    { type: "address", name: "propertyValidator" },
-    { type: "bytes", name: "propertyData" },
-  ];
 
   public static readonly FEE_TYPE_HASH = getTypeHash("Fee", NFTOrder.FEE_ABI);
-  public static readonly PROPERTY_TYPE_HASH = getTypeHash(
-    "Property",
-    NFTOrder.PROPERTY_ABI
-  );
 
   public static readonly TYPE_HASH = getTypeHash(
     NFTOrder.STRUCT_NAME,
     NFTOrder.STRUCT_ABI,
     {
       ["Fee"]: NFTOrder.FEE_ABI,
-      ["Property"]: NFTOrder.PROPERTY_ABI,
     }
   );
 
@@ -130,7 +119,8 @@ export class NFTOrder {
   public nftStandard: NFTStandard;
   public nftToken: string;
   public nftTokenId: BigNumber;
-  public nftTokenProperties: Property[];
+  public nftTokenIds: BigNumber[];
+  public nftTokenIdsMerkleRoot: string;
   public nftTokenAmount: BigNumber;
   public fees: Fee[];
   public chainId: number;
@@ -148,11 +138,30 @@ export class NFTOrder {
     this.fees = _fields.fees;
     this.nftToken = _fields.nftToken;
     this.nftTokenId = _fields.nftTokenId;
-    this.nftTokenProperties = _fields.nftTokenProperties;
     this.nftTokenAmount = _fields.nftTokenAmount;
     this.nftStandard = _fields.nftStandard;
     this.chainId = _fields.chainId;
     this.verifyingContract = _fields.verifyingContract;
+
+    if (_fields.nftTokenIds.length > 0) {
+      const leaves = _fields.nftTokenIds.map((tokenId) =>
+        solidityKeccak256(["uint256"], [tokenId.toString()])
+      );
+      const tree = new MerkleTree(leaves, keccak256, { sort: true });
+      this.nftTokenIdsMerkleRoot = tree.getHexRoot();
+      this.nftTokenIds = _fields.nftTokenIds;
+    } else {
+      this.nftTokenIdsMerkleRoot = _fields.nftTokenIdsMerkleRoot;
+    }
+  }
+
+  public getMerkleProof(tokenId: BigNumber) {
+    const leaves = this.nftTokenIds.map((tokenId) =>
+      solidityKeccak256(["uint256"], [tokenId.toString()])
+    );
+    const tree = new MerkleTree(leaves, keccak256, { sort: true });
+    const leaf = solidityKeccak256(["uint256"], [tokenId.toString()]);
+    return tree.getHexProof(leaf).map((item) => arrayify(item));
   }
 
   public getStructHash(): string {
@@ -169,9 +178,9 @@ export class NFTOrder {
         this._getFeesHash(),
         hexUtils.leftPad(this.nftToken),
         hexUtils.leftPad(this.nftTokenId.toString()),
-        this._getPropertiesHash(),
         hexUtils.leftPad(this.nftTokenAmount.toString()),
-        hexUtils.leftPad(this.nftStandard)
+        hexUtils.leftPad(this.nftStandard),
+        hexUtils.leftPad(this.nftTokenIdsMerkleRoot.toString())
       )
     );
   }
@@ -182,7 +191,6 @@ export class NFTOrder {
         EIP712Domain: EIP712_DOMAIN_PARAMETERS,
         [NFTOrder.STRUCT_NAME]: NFTOrder.STRUCT_ABI,
         ["Fee"]: NFTOrder.FEE_ABI,
-        ["Property"]: NFTOrder.PROPERTY_ABI,
       },
       domain: createExchangeProxyEIP712Domain(
         this.chainId,
@@ -204,15 +212,11 @@ export class NFTOrder {
         })) as any,
         nftToken: this.nftToken,
         nftTokenId: this.nftTokenId.toString(),
-        nftTokenProperties: this.nftTokenProperties as any,
         nftTokenAmount: this.nftTokenAmount.toString(),
         nftStandard: this.nftStandard,
+        nftTokenIdsMerkleRoot: this.nftTokenIdsMerkleRoot,
       },
     };
-  }
-
-  protected _getProperties(): Property[] {
-    return this.nftTokenProperties;
   }
 
   public willExpire(secondsFromNow = 0): boolean {
@@ -233,11 +237,9 @@ export class NFTOrder {
 
   public async sign(signer: TypedDataSigner): Promise<OrderSignature> {
     const { domain, message } = this.getEIP712TypedData();
-
     const types = {
       [NFTOrder.STRUCT_NAME]: NFTOrder.STRUCT_ABI,
       ["Fee"]: NFTOrder.FEE_ABI,
-      ["Property"]: NFTOrder.PROPERTY_ABI,
     };
 
     const rawSignature = await signer._signTypedData(domain, types, message);
@@ -278,22 +280,6 @@ export class NFTOrder {
       default:
         throw new Error(`Cannot sign with signature type: ${type}`);
     }
-  }
-
-  protected _getPropertiesHash(): string {
-    return hexUtils.hash(
-      hexUtils.concat(
-        ...this._getProperties().map((property) =>
-          hexUtils.hash(
-            hexUtils.concat(
-              hexUtils.leftPad(NFTOrder.PROPERTY_TYPE_HASH),
-              hexUtils.leftPad(property.propertyValidator),
-              hexUtils.hash(property.propertyData)
-            )
-          )
-        )
-      )
-    );
   }
 
   protected _getFeesHash(): string {

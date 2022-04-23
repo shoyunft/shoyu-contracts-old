@@ -55,7 +55,8 @@ export function sellAndSwapNFT() {
             path: [buyOrder.erc20Token, this.sushi.address],
             amountOutMin: 0,
             amountIn: buyOrder.erc20TokenAmount,
-          }
+          },
+          [] // tokenIdMerkleProof
         )
       )
         .to.emit(this.erc721, "Transfer")
@@ -127,7 +128,8 @@ export function sellAndSwapNFT() {
             path: [this.weth.address, this.sushi.address],
             amountOutMin: 0,
             amountIn: 0,
-          }
+          },
+          [] // tokenIdMerkleProof
         )
       )
         .to.emit(this.erc1155, "TransferSingle")

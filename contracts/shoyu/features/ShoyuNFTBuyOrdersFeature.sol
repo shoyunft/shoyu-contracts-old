@@ -43,6 +43,7 @@ contract ShoyuNFTBuyOrdersFeature is
     bool unwrapNativeToken;
     address taker;
     address currentNftOwner;
+    bytes32[] tokenIdMerkleProof;
   }
 
   constructor(
@@ -82,7 +83,8 @@ contract ShoyuNFTBuyOrdersFeature is
     LibSignature.Signature memory signature,
     uint256 nftTokenId,
     uint128 nftSellAmount,
-    bool unwrapNativeToken
+    bool unwrapNativeToken,
+    bytes32[] memory tokenIdMerkleProof
   )
     public
     override
@@ -95,7 +97,8 @@ contract ShoyuNFTBuyOrdersFeature is
         nftTokenId,
         unwrapNativeToken,
         msg.sender, // taker
-        msg.sender // owner
+        msg.sender, // owner
+        tokenIdMerkleProof
       )
     );
   }
@@ -113,7 +116,8 @@ contract ShoyuNFTBuyOrdersFeature is
     LibShoyuNFTOrder.NFTOrder memory buyOrder,
     LibSignature.Signature memory signature,
     uint256 nftTokenId,
-    LibShoyuNFTOrder.SwapExactInDetails memory swapDetails
+    LibShoyuNFTOrder.SwapExactInDetails memory swapDetails,
+    bytes32[] memory tokenIdMerkleProof
   ) public override {
     require(
       swapDetails.path[0] == address(buyOrder.erc20Token),
@@ -128,7 +132,8 @@ contract ShoyuNFTBuyOrdersFeature is
         nftTokenId,
         false, // unwrapNativeToken
         address(this), // taker - set to `this` so we can swap the funds before sending funds to taker
-        msg.sender // owner
+        msg.sender, // owner
+        tokenIdMerkleProof
       )
     );
 
@@ -149,7 +154,8 @@ contract ShoyuNFTBuyOrdersFeature is
       signature,
       orderInfo,
       params.taker,
-      params.tokenId
+      params.tokenId,
+      params.tokenIdMerkleProof
     );
 
     if (params.sellAmount > orderInfo.remainingAmount) {

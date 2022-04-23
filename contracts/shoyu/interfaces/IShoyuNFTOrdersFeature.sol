@@ -45,9 +45,10 @@ interface IShoyuNFTOrdersFeature {
   ///      an NFT asset.
   /// @param order The NFT order.
   /// @param nftTokenId The ID of the NFT asset.
-  function validateNFTOrderProperties(
+  function validateTokenIdMerkleProof(
     LibShoyuNFTOrder.NFTOrder calldata order,
-    uint256 nftTokenId
+    uint256 nftTokenId,
+    bytes32[] calldata proof
   ) external view;
 
   /// @dev Get the order info for an NFT order.

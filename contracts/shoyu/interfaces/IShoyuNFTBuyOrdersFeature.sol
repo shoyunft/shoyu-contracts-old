@@ -22,7 +22,8 @@ interface IShoyuNFTBuyOrdersFeature {
     LibSignature.Signature calldata signature,
     uint256 nftTokenId,
     uint128 nftSellAmount,
-    bool unwrapNativeToken
+    bool unwrapNativeToken,
+    bytes32[]calldata proof
   ) external;
 
   /// @dev Sells an NFT asset to fill the given order.
@@ -38,6 +39,7 @@ interface IShoyuNFTBuyOrdersFeature {
     LibShoyuNFTOrder.NFTOrder calldata buyOrder,
     LibSignature.Signature calldata signature,
     uint256 nftTokenId,
-    LibShoyuNFTOrder.SwapExactInDetails calldata swapDetails
+    LibShoyuNFTOrder.SwapExactInDetails calldata swapDetails,
+    bytes32[] calldata proof
   ) external;
 }

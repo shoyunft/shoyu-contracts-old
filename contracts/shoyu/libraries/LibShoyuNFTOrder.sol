@@ -2,12 +2,14 @@ pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
 import "@0x/contracts-erc20/contracts/src/v06/IERC20TokenV06.sol";
-import "../../0x/vendor/IPropertyValidator.sol";
 
 /// @dev A library for common NFT order operations.
 library LibShoyuNFTOrder {
   address internal constant NATIVE_TOKEN_ADDRESS =
     0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+
+  bytes32 internal constant MAX_MERKLE_ROOT =
+    0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
   enum OrderStatus {
     INVALID,
@@ -24,11 +26,6 @@ library LibShoyuNFTOrder {
   enum NFTStandard {
     ERC721,
     ERC1155
-  }
-
-  struct Property {
-    IPropertyValidator propertyValidator;
-    bytes propertyData;
   }
 
   struct Fee {
@@ -49,6 +46,7 @@ library LibShoyuNFTOrder {
     uint256 amountOutMin;
   }
 
+  // TODO: is there a better way to pack this?
   struct NFTOrder {
     TradeDirection direction;
     address maker;
@@ -60,9 +58,9 @@ library LibShoyuNFTOrder {
     Fee[] fees;
     address nftToken;
     uint256 nftTokenId;
-    Property[] nftTokenProperties;
     uint128 nftTokenAmount;
     NFTStandard nftStandard;
+    bytes32 nftTokenIdsMerkleRoot;
   }
 
   struct OrderInfo {
@@ -89,22 +87,18 @@ library LibShoyuNFTOrder {
   //       "Fee[] fees,",
   //       "address nftToken,",
   //       "uint256 nftTokenId,",
-  //       "Property[] nftTokenProperties,",
   //       "uint128 nftTokenAmount",
   //       "uint8 nftStandard,",
+  //       "bytes32 nftTokenIdsMerkleRoot,",
   //     ")",
   //     "Fee(",
   //       "address recipient,",
   //       "uint256 amount,",
   //       "bytes feeData",
-  //     ")",
-  //     "Property(",
-  //       "address propertyValidator,",
-  //       "bytes propertyData",
   //     ")"
   // ))
   uint256 private constant _NFT_ORDER_TYPEHASH =
-    0x28ffda96e4cd62c373e1d42f0c016401e62a6e6d7043adedd59f6a999d339b79;
+    0x4043fa075d3468727e8e8378c138c88a580d509feb5aac078028aebdc2d626c8;
 
   // keccak256(abi.encodePacked(
   //     "Fee(",
@@ -116,26 +110,9 @@ library LibShoyuNFTOrder {
   uint256 private constant _FEE_TYPEHASH =
     0xe68c29f1b4e8cce0bbcac76eb1334bdc1dc1f293a517c90e9e532340e1e94115;
 
-  // keccak256(abi.encodePacked(
-  //     "Property(",
-  //       "address propertyValidator,",
-  //       "bytes propertyData",
-  //     ")"
-  // ))
-  uint256 private constant _PROPERTY_TYPEHASH =
-    0x6292cf854241cb36887e639065eca63b3af9f7f70270cebeda4c29b6d3bc65e8;
-
   // keccak256("");
   bytes32 private constant _EMPTY_ARRAY_KECCAK256 =
     0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
-
-  // keccak256(abi.encodePacked(keccak256(abi.encode(
-  //     _PROPERTY_TYPEHASH,
-  //     address(0),
-  //     keccak256("")
-  // ))));
-  bytes32 private constant _NULL_PROPERTY_STRUCT_HASH =
-    0x720ee400a9024f6a49768142c339bf09d2dd9056ab52d20fbe7165faba6e142d;
 
   uint256 private constant ADDRESS_MASK = (1 << 160) - 1;
 
@@ -147,7 +124,6 @@ library LibShoyuNFTOrder {
     pure
     returns (bytes32 structHash)
   {
-    bytes32 propertiesHash = _propertiesHash(order.nftTokenProperties);
     bytes32 feesHash = _feesHash(order.fees);
 
     // Hash in place, equivalent to:
@@ -163,9 +139,9 @@ library LibShoyuNFTOrder {
     //     feesHash,
     //     order.nftToken,
     //     order.nftTokenId,
-    //     propertiesHash,
     //     order.nftTokenAmount,
-    //     order.nftStandard
+    //     order.nftStandard,
+    //     order.nftTokenIdsMerkleRoot
     // ));
 
     assembly {
@@ -175,15 +151,12 @@ library LibShoyuNFTOrder {
 
       let typeHashPos := sub(order, 32) // order - 32
       let feesHashPos := add(order, 224) // order + (32 * 7)
-      let propertiesHashPos := add(order, 320) // order + (32 * 10)
 
       let typeHashMemBefore := mload(typeHashPos)
       let feesHashMemBefore := mload(feesHashPos)
-      let propertiesHashMemBefore := mload(propertiesHashPos)
 
       mstore(typeHashPos, _NFT_ORDER_TYPEHASH)
       mstore(feesHashPos, feesHash)
-      mstore(propertiesHashPos, propertiesHash)
       structHash := keccak256(
         typeHashPos,
         448 /* 32 * 14 */
@@ -191,68 +164,9 @@ library LibShoyuNFTOrder {
 
       mstore(typeHashPos, typeHashMemBefore)
       mstore(feesHashPos, feesHashMemBefore)
-      mstore(propertiesHashPos, propertiesHashMemBefore)
     }
 
     return structHash;
-  }
-
-  // Hashes the `properties` array as part of computing the
-  // EIP-712 hash of an `ERC721Order` or `ERC1155Order`.
-  function _propertiesHash(Property[] memory properties)
-    private
-    pure
-    returns (bytes32 propertiesHash)
-  {
-    uint256 numProperties = properties.length;
-    // We give `properties.length == 0` and `properties.length == 1`
-    // special treatment because we expect these to be the most common.
-    if (numProperties == 0) {
-      propertiesHash = _EMPTY_ARRAY_KECCAK256;
-    } else if (numProperties == 1) {
-      Property memory property = properties[0];
-      if (
-        address(property.propertyValidator) == address(0) &&
-        property.propertyData.length == 0
-      ) {
-        propertiesHash = _NULL_PROPERTY_STRUCT_HASH;
-      } else {
-        // propertiesHash = keccak256(abi.encodePacked(keccak256(abi.encode(
-        //     _PROPERTY_TYPEHASH,
-        //     properties[0].propertyValidator,
-        //     keccak256(properties[0].propertyData)
-        // ))));
-        bytes32 dataHash = keccak256(property.propertyData);
-        assembly {
-          // Load free memory pointer
-          let mem := mload(64)
-          mstore(mem, _PROPERTY_TYPEHASH)
-          // property.propertyValidator
-          mstore(add(mem, 32), and(ADDRESS_MASK, mload(property)))
-          // keccak256(property.propertyData)
-          mstore(add(mem, 64), dataHash)
-          mstore(mem, keccak256(mem, 96))
-          propertiesHash := keccak256(mem, 32)
-        }
-      }
-    } else {
-      bytes32[] memory propertyStructHashArray = new bytes32[](numProperties);
-      for (uint256 i = 0; i < numProperties; i++) {
-        propertyStructHashArray[i] = keccak256(
-          abi.encode(
-            _PROPERTY_TYPEHASH,
-            properties[i].propertyValidator,
-            keccak256(properties[i].propertyData)
-          )
-        );
-      }
-      assembly {
-        propertiesHash := keccak256(
-          add(propertyStructHashArray, 32),
-          mul(numProperties, 32)
-        )
-      }
-    }
   }
 
   // Hashes the `fees` array as part of computing the
@@ -263,8 +177,10 @@ library LibShoyuNFTOrder {
     returns (bytes32 feesHash)
   {
     uint256 numFees = fees.length;
+    
     // We give `fees.length == 0` and `fees.length == 1`
     // special treatment because we expect these to be the most common.
+    // TODO: add fees.length == 2 and remove == 0
     if (numFees == 0) {
       feesHash = _EMPTY_ARRAY_KECCAK256;
     } else if (numFees == 1) {

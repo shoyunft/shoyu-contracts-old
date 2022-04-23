@@ -17,7 +17,8 @@ abstract contract ShoyuNFTBuyOrders is ShoyuNFTOrders {
     LibSignature.Signature memory signature,
     LibShoyuNFTOrder.OrderInfo memory orderInfo,
     address taker,
-    uint256 tokenId
+    uint256 tokenId,
+    bytes32[] memory tokenIdMerkleProof
   ) internal view {
     // Order must be buying the NFT asset.
     require(
@@ -48,9 +49,9 @@ abstract contract ShoyuNFTBuyOrders is ShoyuNFTOrders {
         .rrevert();
     }
 
-    // Check that the asset with the given token ID satisfies the properties
+    // Check that the asset with the given token ID satisfies the merkle root
     // specified by the order.
-    _validateOrderProperties(buyOrder, tokenId);
+    _validateTokenIdMerkleProof(buyOrder, tokenId, tokenIdMerkleProof);
 
     // Check the signature.
     _validateOrderSignature(orderInfo.orderHash, signature, buyOrder.maker);

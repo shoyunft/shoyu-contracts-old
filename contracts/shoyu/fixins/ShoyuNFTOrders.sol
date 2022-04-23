@@ -2,6 +2,7 @@ pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
 import "@0x/contracts-utils/contracts/src/v06/LibSafeMathV06.sol";
+import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
 import "../../0x/errors/LibNFTOrdersRichErrors.sol";
 import "../../0x/features/libs/LibSignature.sol";
 import "../../0x/fixins/FixinCommon.sol";
@@ -75,54 +76,40 @@ abstract contract ShoyuNFTOrders is
   ///      an NFT asset.
   /// @param order The NFT order.
   /// @param tokenId The ID of the NFT asset.
-  function _validateOrderProperties(
+  /// @param tokenIdMerkleProof The Merkle proof that proves inclusion of `tokenId`
+  function _validateTokenIdMerkleProof(
     LibShoyuNFTOrder.NFTOrder memory order,
-    uint256 tokenId
-  ) internal view {
+    uint256 tokenId,
+    bytes32[] memory tokenIdMerkleProof
+  ) internal pure {
     // Order must be buying an NFT asset to have properties.
     require(
       order.direction == LibShoyuNFTOrder.TradeDirection.BUY_NFT,
-      "_validateOrderProperties/WRONG_TRADE_DIRECTION"
+      "_validateTokenIdMerkleProof/WRONG_TRADE_DIRECTION"
     );
 
-    // If no properties are specified, check that the given
-    // `tokenId` matches the one specified in the order.
-    if (order.nftTokenProperties.length == 0) {
-      if (tokenId != order.nftTokenId) {
+    // If no proof is specified, check the order's merkle root
+    // a) merkle root == 0, tokenId must match buy order
+    // b) if merkle root == 0xfff...f, any tokenId can fill order *
+    // TODO: *is there some better way of handling this?
+    if (tokenIdMerkleProof.length == 0) {
+      if (order.nftTokenIdsMerkleRoot == 0) {
+        if (tokenId != order.nftTokenId) {
+          LibNFTOrdersRichErrors
+            .TokenIdMismatchError(tokenId, order.nftTokenId)
+            .rrevert();
+        }
+      } else if (order.nftTokenIdsMerkleRoot != LibShoyuNFTOrder.MAX_MERKLE_ROOT) {
         LibNFTOrdersRichErrors
           .TokenIdMismatchError(tokenId, order.nftTokenId)
           .rrevert();
       }
     } else {
-      // Validate each property
-      for (uint256 i = 0; i < order.nftTokenProperties.length; i++) {
-        LibShoyuNFTOrder.Property memory property = order.nftTokenProperties[i];
-        // `address(0)` is interpreted as a no-op. Any token ID
-        // will satisfy a property with `propertyValidator == address(0)`.
-        if (address(property.propertyValidator) == address(0)) {
-          continue;
-        }
-
-        // Call the property validator and throw a descriptive error
-        // if the call reverts.
-        try
-          property.propertyValidator.validateProperty(
-            order.nftToken,
-            tokenId,
-            property.propertyData
-          )
-        {} catch (bytes memory errorData) {
-          LibNFTOrdersRichErrors
-            .PropertyValidationFailedError(
-              address(property.propertyValidator),
-              order.nftToken,
-              tokenId,
-              property.propertyData,
-              errorData
-            )
-            .rrevert();
-        }
-      }
+      // Validate merkle proof
+      require(
+        MerkleProof.verify(tokenIdMerkleProof, order.nftTokenIdsMerkleRoot, keccak256(abi.encodePacked(tokenId))),
+        "_validateTokenIdMerkleProof/INVALID_PROOF"
+      );
     }
   }
 
@@ -151,7 +138,7 @@ abstract contract ShoyuNFTOrders is
     // Only buy orders with `nftTokenId` == 0 can be property
     // orders.
     if (
-      order.nftTokenProperties.length > 0 &&
+      order.nftTokenIdsMerkleRoot != 0 &&
       (order.direction != LibShoyuNFTOrder.TradeDirection.BUY_NFT ||
         order.nftTokenId != 0)
     ) {
