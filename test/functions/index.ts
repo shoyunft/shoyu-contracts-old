@@ -9,3 +9,4 @@ export * from "./sellNFT.test";
 export * from "./batchTransferNFTs.test";
 export * from "./getNFTOrderHash.test";
 export * from "./validateNFTOrderSignature.test";
+export * from "./validateTokenIdMerkleProof.test";

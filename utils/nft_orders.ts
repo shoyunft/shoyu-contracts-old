@@ -65,7 +65,7 @@ const NFT_ORDER_DEFAULT_VALUES = {
   nftStandard: NFTStandard.ERC721,
   nftToken: AddressZero,
   nftTokenId: Zero,
-  nftTokenIds: [],
+  nftTokenIds: [] as BigNumber[],
   nftTokenAmount: Zero,
   nftTokenIdsMerkleRoot: HashZero,
   chainId: 1,
@@ -136,18 +136,18 @@ export class NFTOrder {
     this.fees = _fields.fees;
     this.nftToken = _fields.nftToken;
     this.nftTokenId = _fields.nftTokenId;
+    this.nftTokenIds = _fields.nftTokenIds;
     this.nftTokenAmount = _fields.nftTokenAmount;
     this.nftStandard = _fields.nftStandard;
     this.chainId = _fields.chainId;
     this.verifyingContract = _fields.verifyingContract;
 
-    if (_fields.nftTokenIds.length > 0) {
-      const leaves = _fields.nftTokenIds.map((tokenId) =>
+    if (this.nftTokenIds.length > 0) {
+      const leaves = this.nftTokenIds.map((tokenId) =>
         solidityKeccak256(["uint256"], [tokenId.toString()])
       );
       const tree = new MerkleTree(leaves, keccak256, { sort: true });
       this.nftTokenIdsMerkleRoot = tree.getHexRoot();
-      this.nftTokenIds = _fields.nftTokenIds;
     } else {
       this.nftTokenIdsMerkleRoot = _fields.nftTokenIdsMerkleRoot;
     }
