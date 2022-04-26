@@ -44,7 +44,6 @@ export enum NFTStandard {
 interface Fee {
   recipient: string;
   amount: BigNumber;
-  feeData: string;
 }
 
 interface OrderSignature {
@@ -96,7 +95,6 @@ export class NFTOrder {
   public static readonly FEE_ABI = [
     { type: "address", name: "recipient" },
     { type: "uint256", name: "amount" },
-    { type: "bytes", name: "feeData" },
   ];
 
   public static readonly FEE_TYPE_HASH = getTypeHash("Fee", NFTOrder.FEE_ABI);
@@ -208,7 +206,6 @@ export class NFTOrder {
         fees: this.fees.map((fee) => ({
           recipient: fee.recipient,
           amount: fee.amount.toString(),
-          feeData: fee.feeData,
         })) as any,
         nftToken: this.nftToken,
         nftTokenId: this.nftTokenId.toString(),
@@ -290,8 +287,7 @@ export class NFTOrder {
             hexUtils.concat(
               hexUtils.leftPad(NFTOrder.FEE_TYPE_HASH),
               hexUtils.leftPad(fee.recipient),
-              hexUtils.leftPad(fee.amount.toString()),
-              hexUtils.hash(fee.feeData)
+              hexUtils.leftPad(fee.amount.toString())
             )
           )
         )

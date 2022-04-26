@@ -131,24 +131,7 @@ abstract contract ShoyuSpender is
           feeFillAmount
         );
       }
-      // Note that the fee callback is _not_ called if zero
-      // `feeData` is provided. If `feeData` is provided, we assume
-      // the fee recipient is a contract that implements the
-      // `IFeeRecipient` interface.
-      if (fee.feeData.length > 0) {
-        // Invoke the callback
-        bytes4 callbackResult = IFeeRecipient(fee.recipient)
-          .receiveZeroExFeeCallback(
-            useNativeToken ? LibShoyuNFTOrder.NATIVE_TOKEN_ADDRESS : address(order.erc20Token),
-            feeFillAmount,
-            fee.feeData
-          );
-        // Check for the magic success bytes
-        require(
-          callbackResult == FEE_CALLBACK_MAGIC_BYTES,
-          "_payFees/CALLBACK_FAILED"
-        );
-      }
+
       // Sum the fees paid
       totalFeesPaid = totalFeesPaid.safeAdd(feeFillAmount);
     }

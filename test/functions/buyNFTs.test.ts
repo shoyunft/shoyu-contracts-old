@@ -38,7 +38,6 @@ export function buyNFTs() {
         {
           recipient: this.deployer.address,
           amount: sellPriceERC721.div(50), // * 0.02
-          feeData: "0x",
         },
       ],
     });
@@ -61,7 +60,6 @@ export function buyNFTs() {
         {
           recipient: this.deployer.address,
           amount: sellPriceERC1155.div(50), // * 0.02
-          feeData: "0x",
         },
       ],
     });
@@ -183,7 +181,6 @@ export function buyNFTs() {
         {
           recipient: this.deployer.address,
           amount: sellPriceERC721.div(50), // * 0.02
-          feeData: "0x",
         },
       ],
     });
@@ -206,7 +203,6 @@ export function buyNFTs() {
         {
           recipient: this.deployer.address,
           amount: sellPriceERC1155.div(50), // * 0.02
-          feeData: "0x",
         },
       ],
     });
@@ -280,7 +276,6 @@ export function buyNFTs() {
         {
           recipient: this.deployer.address,
           amount: sellPriceERC721.div(50), // * 0.02
-          feeData: "0x",
         },
       ],
     });
@@ -303,7 +298,6 @@ export function buyNFTs() {
         {
           recipient: this.deployer.address,
           amount: sellPriceERC1155.div(50), // * 0.02
-          feeData: "0x",
         },
       ],
     });

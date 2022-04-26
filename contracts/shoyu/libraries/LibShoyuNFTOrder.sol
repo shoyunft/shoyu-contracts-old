@@ -31,7 +31,6 @@ library LibShoyuNFTOrder {
   struct Fee {
     address recipient;
     uint256 amount;
-    bytes feeData;
   }
 
   struct SwapExactOutDetails {
@@ -93,22 +92,20 @@ library LibShoyuNFTOrder {
   //     ")",
   //     "Fee(",
   //       "address recipient,",
-  //       "uint256 amount,",
-  //       "bytes feeData",
+  //       "uint256 amount",
   //     ")"
   // ))
   uint256 private constant _NFT_ORDER_TYPEHASH =
-    0x4043fa075d3468727e8e8378c138c88a580d509feb5aac078028aebdc2d626c8;
+    0x2667c2b55ebbf51f58678b933d290274f12938708e14920a5926f8d1be7af85d;
 
   // keccak256(abi.encodePacked(
   //     "Fee(",
   //       "address recipient,",
-  //       "uint256 amount,",
-  //       "bytes feeData",
+  //       "uint256 amount",
   //     ")"
   // ))
   uint256 private constant _FEE_TYPEHASH =
-    0xe68c29f1b4e8cce0bbcac76eb1334bdc1dc1f293a517c90e9e532340e1e94115;
+    0xfe66e05843363d63611ea99f9490e5edd8ffc1f951c97666da1eeafddf12f9a1;
 
   // keccak256("");
   bytes32 private constant _EMPTY_ARRAY_KECCAK256 =
@@ -187,11 +184,9 @@ library LibShoyuNFTOrder {
       // feesHash = keccak256(abi.encodePacked(keccak256(abi.encode(
       //     _FEE_TYPEHASH,
       //     fees[0].recipient,
-      //     fees[0].amount,
-      //     keccak256(fees[0].feeData)
+      //     fees[0].amount
       // ))));
       Fee memory fee = fees[0];
-      bytes32 dataHash = keccak256(fee.feeData);
       assembly {
         // Load free memory pointer
         let mem := mload(64)
@@ -200,9 +195,7 @@ library LibShoyuNFTOrder {
         mstore(add(mem, 32), and(ADDRESS_MASK, mload(fee)))
         // fee.amount
         mstore(add(mem, 64), mload(add(fee, 32)))
-        // keccak256(fee.feeData)
-        mstore(add(mem, 96), dataHash)
-        mstore(mem, keccak256(mem, 128))
+        mstore(mem, keccak256(mem, 96))
         feesHash := keccak256(mem, 32)
       }
     } else {
@@ -212,8 +205,7 @@ library LibShoyuNFTOrder {
           abi.encode(
             _FEE_TYPEHASH,
             fees[i].recipient,
-            fees[i].amount,
-            keccak256(fees[i].feeData)
+            fees[i].amount
           )
         );
       }

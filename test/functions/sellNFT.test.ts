@@ -100,7 +100,6 @@ export function sellNFT() {
         {
           recipient: this.deployer.address,
           amount: offerAmount.div(50), // * 0.02
-          feeData: "0x",
         },
       ],
     });
@@ -178,7 +177,6 @@ export function sellNFT() {
         {
           recipient: this.deployer.address,
           amount: offerAmount.div(50), // * 0.02
-          feeData: "0x",
         },
       ],
     });
