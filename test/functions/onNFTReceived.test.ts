@@ -98,7 +98,7 @@ export function onNFTReceived() {
       .withArgs(
         buyOrder.direction,
         buyOrder.maker,
-        this.erc721.address,
+        this.bob.address,
         buyOrder.nonce,
         buyOrder.erc20Token,
         buyOrder.erc20TokenAmount,
@@ -214,7 +214,7 @@ export function onNFTReceived() {
       .withArgs(
         buyOrder.direction,
         buyOrder.maker,
-        this.erc1155.address,
+        this.bob.address,
         buyOrder.nonce,
         buyOrder.erc20Token,
         buyOrder.erc20TokenAmount,

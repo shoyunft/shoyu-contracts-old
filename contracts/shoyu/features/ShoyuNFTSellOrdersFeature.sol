@@ -291,11 +291,11 @@ contract ShoyuNFTSellOrdersFeature is
 
     // Fees are paid from the EP's current balance of ETH.
     _payEthFees(
-        sellOrder,
-        params.buyAmount,
-        orderInfo.orderAmount,
-        erc20FillAmount,
-        params.ethAvailable
+      sellOrder,
+      params.buyAmount,
+      orderInfo.orderAmount,
+      erc20FillAmount,
+      params.ethAvailable
     );
 
     emit NFTOrderFilled(

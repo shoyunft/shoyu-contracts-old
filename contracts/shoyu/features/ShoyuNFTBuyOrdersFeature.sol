@@ -86,13 +86,17 @@ contract ShoyuNFTBuyOrdersFeature is
   /// @param unwrapNativeToken If this parameter is true and the
   ///        ERC20 token of the order is e.g. WETH, unwraps the
   ///        token before transferring it to the taker.
+  /// @param nftTokenIdMerkleProof The merkle proof used in
+  ///        combination with `nftTokenId` and
+  ///        `buyOrder.nftTokenIdMerkleRoot` to prove that
+  ///        `nftTokenId` can fill the buy order.
   function sellNFT(
     LibShoyuNFTOrder.NFTOrder memory buyOrder,
     LibSignature.Signature memory signature,
     uint256 nftTokenId,
     uint128 nftSellAmount,
     bool unwrapNativeToken,
-    bytes32[] memory tokenIdMerkleProof
+    bytes32[] memory nftTokenIdMerkleProof
   )
     public
     override
@@ -106,8 +110,20 @@ contract ShoyuNFTBuyOrdersFeature is
         unwrapNativeToken,
         msg.sender, // taker
         msg.sender, // owner
-        tokenIdMerkleProof
+        nftTokenIdMerkleProof
       )
+    );
+
+    emit NFTOrderFilled(
+      buyOrder.direction,
+      buyOrder.maker,
+      msg.sender,
+      buyOrder.nonce,
+      buyOrder.erc20Token,
+      buyOrder.erc20TokenAmount,
+      buyOrder.nftToken,
+      nftTokenId,
+      nftSellAmount
     );
   }
 
@@ -118,14 +134,20 @@ contract ShoyuNFTBuyOrdersFeature is
   ///        sold. If the given order specifies properties,
   ///        the asset must satisfy those properties. Otherwise,
   ///        it must equal the tokenId in the order.
+  /// @param nftSellAmount The amount of the NFT asset to sell.
   /// @param swapDetails The details of the swap the seller would
   ///        like to perform.
+  /// @param nftTokenIdMerkleProof The merkle proof used in
+  ///        combination with `nftTokenId` and
+  ///        `buyOrder.nftTokenIdMerkleRoot` to prove that
+  ///        `nftTokenId` can fill the buy order.
   function sellAndSwapNFT(
     LibShoyuNFTOrder.NFTOrder memory buyOrder,
     LibSignature.Signature memory signature,
     uint256 nftTokenId,
+    uint128 nftSellAmount,
     LibShoyuNFTOrder.SwapExactInDetails memory swapDetails,
-    bytes32[] memory tokenIdMerkleProof
+    bytes32[] memory nftTokenIdMerkleProof
   ) public override {
     require(
       swapDetails.path[0] == address(buyOrder.erc20Token),
@@ -136,12 +158,12 @@ contract ShoyuNFTBuyOrdersFeature is
       buyOrder,
       signature,
       SellParams(
-        buyOrder.nftTokenAmount,
+        nftSellAmount,
         nftTokenId,
         false, // unwrapNativeToken
         address(this), // taker - set to `this` so we can swap the funds before sending funds to taker
         msg.sender, // owner
-        tokenIdMerkleProof
+        nftTokenIdMerkleProof
       )
     );
 
@@ -245,17 +267,17 @@ contract ShoyuNFTBuyOrdersFeature is
       orderInfo.orderAmount,
       false
     );
-    
+
     emit NFTOrderFilled(
       buyOrder.direction,
       buyOrder.maker,
-      msg.sender,
+      params.taker,
       buyOrder.nonce,
       buyOrder.erc20Token,
       buyOrder.erc20TokenAmount,
       buyOrder.nftToken,
       params.tokenId,
-      buyOrder.nftTokenAmount
+      params.sellAmount
     );
   }
 
@@ -323,9 +345,9 @@ contract ShoyuNFTBuyOrdersFeature is
     uint256 value,
     bytes calldata data
   ) internal {
-    // Decode the order, signature, and `unwrapNativeToken` from
-    // `data`. If `data` does not encode such parameters, this
-    // will throw.
+    // Decode the order, signature, `unwrapNativeToken`, and
+    // `merkleProof` from from `data`. If `data` does not encode
+    // such parameters, this will throw.
     (
       LibShoyuNFTOrder.NFTOrder memory buyOrder,
       LibSignature.Signature memory signature,

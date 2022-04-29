@@ -17,13 +17,17 @@ interface IShoyuNFTBuyOrdersFeature {
   /// @param unwrapNativeToken If this parameter is true and the
   ///        ERC20 token of the order is e.g. WETH, unwraps the
   ///        token before transferring it to the taker.
+  /// @param nftTokenIdMerkleProof The merkle proof used in
+  ///        combination with `nftTokenId` and
+  ///        `buyOrder.nftTokenIdMerkleRoot` to prove that
+  ///        `nftTokenId` can fill the buy order.
   function sellNFT(
     LibShoyuNFTOrder.NFTOrder calldata buyOrder,
     LibSignature.Signature calldata signature,
     uint256 nftTokenId,
     uint128 nftSellAmount,
     bool unwrapNativeToken,
-    bytes32[]calldata proof
+    bytes32[] calldata nftTokenIdMerkleProof
   ) external;
 
   /// @dev Sells an NFT asset to fill the given order.
@@ -33,14 +37,20 @@ interface IShoyuNFTBuyOrdersFeature {
   ///        sold. If the given order specifies properties,
   ///        the asset must satisfy those properties. Otherwise,
   ///        it must equal the tokenId in the order.
+  /// @param nftSellAmount The amount of the NFT asset to sell.
   /// @param swapDetails The details of the swap the seller would
   ///        like to perform.
+  /// @param nftTokenIdMerkleProof The merkle proof used in
+  ///        combination with `nftTokenId` and
+  ///        `buyOrder.nftTokenIdMerkleRoot` to prove that
+  ///        `nftTokenId` can fill the buy order.
   function sellAndSwapNFT(
     LibShoyuNFTOrder.NFTOrder calldata buyOrder,
     LibSignature.Signature calldata signature,
     uint256 nftTokenId,
+    uint128 nftSellAmount,
     LibShoyuNFTOrder.SwapExactInDetails calldata swapDetails,
-    bytes32[] calldata proof
+    bytes32[] calldata nftTokenIdMerkleProof
   ) external;
 
   /// @dev Callback for the ERC721 `safeTransferFrom` function.
