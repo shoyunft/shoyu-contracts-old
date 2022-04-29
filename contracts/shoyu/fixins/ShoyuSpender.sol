@@ -19,10 +19,6 @@ abstract contract ShoyuSpender is
   using LibSafeMathV06 for uint256;
   using LibSafeMathV06 for uint128;
 
-  /// @dev The magic return value indicating the success of a `receiveZeroExFeeCallback`.
-  bytes4 private constant FEE_CALLBACK_MAGIC_BYTES =
-    IFeeRecipient.receiveZeroExFeeCallback.selector;
-
   /// @dev The WETH token contract.
   IEtherTokenV06 internal immutable WETH;
 

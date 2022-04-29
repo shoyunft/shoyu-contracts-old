@@ -14,6 +14,7 @@ import "../interfaces/IShoyuNFTBuyOrdersFeature.sol";
 import "../interfaces/IShoyuNFTOrderEvents.sol";
 import "../libraries/LibShoyuNFTOrder.sol";
 import "../libraries/LibShoyuNFTOrdersStorage.sol";
+import "../libraries/LibShoyuNFTOrdersRichErrors.sol";
 import "../fixins/ShoyuSwapper.sol";
 import "../fixins/ShoyuNFTBuyOrders.sol";
 import "../fixins/ShoyuSpender.sol";
@@ -36,6 +37,11 @@ contract ShoyuNFTBuyOrdersFeature is
   string public constant override FEATURE_NAME = "ShoyuNFTBuyOrders";
   /// @dev Version of this feature.
   uint256 public immutable override FEATURE_VERSION = _encodeVersion(1, 0, 0);
+
+  /// @dev The magic return value indicating the success of a `onERC721Received`.
+  bytes4 private constant ERC721_RECEIVED_MAGIC_BYTES = this.onERC721Received.selector;
+  /// @dev The magic return value indicating the success of a `onERC1155Received`.
+  bytes4 private constant ERC1155_RECEIVED_MAGIC_BYTES = this.onERC1155Received.selector;
 
   struct SellParams {
     uint128 sellAmount;
@@ -63,6 +69,8 @@ contract ShoyuNFTBuyOrdersFeature is
   function migrate() external returns (bytes4 success) {
     _registerFeatureFunction(this.sellNFT.selector);
     _registerFeatureFunction(this.sellAndSwapNFT.selector);
+    _registerFeatureFunction(this.onERC721Received.selector);
+    _registerFeatureFunction(this.onERC1155Received.selector);
     return LibMigrate.MIGRATE_SUCCESS;
   }
 
@@ -248,6 +256,106 @@ contract ShoyuNFTBuyOrdersFeature is
       buyOrder.nftToken,
       params.tokenId,
       buyOrder.nftTokenAmount
+    );
+  }
+
+  /// @dev Callback for the ERC721 `safeTransferFrom` function.
+  ///      This callback can be used to sell an ERC721 asset if
+  ///      a valid ERC721 order, signature and `unwrapNativeToken`
+  ///      are encoded in `data`. This allows takers to sell their
+  ///      ERC721 asset without first calling `setApprovalForAll`.
+  /// @param operator The address which called `safeTransferFrom`.
+  /// @param tokenId The ID of the asset being transferred.
+  /// @param data Additional data with no specified format. If a
+  ///        valid ERC721 order, signature, `merkleProof` and
+  ///        `unwrapNativeToken` are encoded in `data`, this function
+  ///        will try to fill the order using the received asset.
+  /// @return success The selector of this function (0x150b7a02),
+  ///         indicating that the callback succeeded.
+  function onERC721Received(
+    address operator,
+    address /* from */,
+    uint256 tokenId,
+    bytes calldata data
+  )
+    external
+    override
+    returns (bytes4 success)
+  {
+    _onNFTReceived(operator, tokenId, 1, data);
+
+    return ERC721_RECEIVED_MAGIC_BYTES;
+  }
+
+  /// @dev Callback for the ERC1155 `safeTransferFrom` function.
+  ///      This callback can be used to sell an ERC1155 asset if
+  ///      a valid ERC1155 order, signature and `unwrapNativeToken`
+  ///      are encoded in `data`. This allows takers to sell their
+  ///      ERC1155 asset without first calling `setApprovalForAll`.
+  /// @param operator The address which called `safeTransferFrom`.
+  /// @param tokenId The ID of the asset being transferred.
+  /// @param value The amount being transferred.
+  /// @param data Additional data with no specified format. If a
+  ///        valid ERC1155 order, signature, `merkleProof` and
+  ///        `unwrapNativeToken` are encoded in `data`, this function
+  ///        will try to fill the order using the received asset.
+  /// @return success The selector of this function (0xf23a6e61),
+  ///         indicating that the callback succeeded.
+  function onERC1155Received(
+    address operator,
+    address /* from */,
+    uint256 tokenId,
+    uint256 value,
+    bytes calldata data
+  )
+    external
+    override
+    returns (bytes4 success)
+  {
+    _onNFTReceived(operator, tokenId, value, data);
+
+    return ERC1155_RECEIVED_MAGIC_BYTES;
+  }
+
+  function _onNFTReceived(
+    address operator,
+    uint256 tokenId,
+    uint256 value,
+    bytes calldata data
+  ) internal {
+    // Decode the order, signature, and `unwrapNativeToken` from
+    // `data`. If `data` does not encode such parameters, this
+    // will throw.
+    (
+      LibShoyuNFTOrder.NFTOrder memory buyOrder,
+      LibSignature.Signature memory signature,
+      bool unwrapNativeToken,
+      bytes32[] memory merkleProof
+    ) = abi.decode(
+      data,
+      (LibShoyuNFTOrder.NFTOrder, LibSignature.Signature, bool, bytes32[])
+    );
+
+    // `onNFTContract` is called by the NFT token contract.
+    // Check that it matches the NFT token in the order.
+    if (msg.sender != address(buyOrder.nftToken)) {
+      LibShoyuNFTOrdersRichErrors.TokenMismatchError(
+        msg.sender,
+        address(buyOrder.nftToken)
+      ).rrevert();
+    }
+
+    _sellNFT(
+      buyOrder,
+      signature,
+      SellParams(
+        value.safeDowncastToUint128(),
+        tokenId,
+        unwrapNativeToken,
+        operator, // taker
+        address(this), // owner (we hold the NFT currently)
+        merkleProof
+      )
     );
   }
 }

@@ -16,6 +16,7 @@ import {
   getNFTOrderHash,
   validateNFTOrderSignature,
   validateTokenIdMerkleProof,
+  onNFTReceived,
 } from "./functions";
 
 use(solidity);
@@ -94,4 +95,5 @@ describe("ShoyuNFTOrders", function () {
   describe("getNFTOrderHash", getNFTOrderHash.bind(this));
   describe("validateNFTOrderSignature", validateNFTOrderSignature.bind(this));
   describe("validateTokenIdMerkleProof", validateTokenIdMerkleProof.bind(this));
+  describe("onNFTReceived", onNFTReceived.bind(this));
 });

@@ -10,3 +10,4 @@ export * from "./batchTransferNFTs.test";
 export * from "./getNFTOrderHash.test";
 export * from "./validateNFTOrderSignature.test";
 export * from "./validateTokenIdMerkleProof.test";
+export * from "./onNFTReceived.test";
