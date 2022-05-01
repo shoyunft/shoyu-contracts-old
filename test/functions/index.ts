@@ -1,5 +1,5 @@
-export * from "./buyAndSwapNFT.test";
-export * from "./buyAndSwapNFTs.test";
+export * from "./swapAndBuyNFT.test";
+export * from "./swapAndBuyNFTs.test";
 export * from "./sellAndSwapNFT.test";
 export * from "./cancelNFTOrder.test";
 export * from "./batchCancelNFTOrders.test";

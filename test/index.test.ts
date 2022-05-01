@@ -5,8 +5,8 @@ import { solidity } from "ethereum-waffle";
 import { seedSushiswapPools } from "./fixtures";
 import {
   sellAndSwapNFT,
-  buyAndSwapNFT,
-  buyAndSwapNFTs,
+  swapAndBuyNFT,
+  swapAndBuyNFTs,
   cancelNFTOrder,
   batchCancelNFTOrders,
   buyNFT,
@@ -85,8 +85,8 @@ describe("ShoyuNFTOrders", function () {
 
   describe("buyNFT", buyNFT.bind(this));
   describe("buyNFTs", buyNFTs.bind(this));
-  describe("buyAndSwapNFT", buyAndSwapNFT.bind(this));
-  describe("buyAndSwapNFTs", buyAndSwapNFTs.bind(this));
+  describe("swapAndBuyNFT", swapAndBuyNFT.bind(this));
+  describe("swapAndBuyNFTs", swapAndBuyNFTs.bind(this));
   describe("sellNFT", sellNFT.bind(this));
   describe("sellAndSwapNFT", sellAndSwapNFT.bind(this));
   describe("cancelNFTOrder", cancelNFTOrder.bind(this));

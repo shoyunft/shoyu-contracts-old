@@ -61,8 +61,8 @@ contract ShoyuNFTSellOrdersFeature is
   function migrate() external returns (bytes4 success) {
     _registerFeatureFunction(this.buyNFT.selector);
     _registerFeatureFunction(this.buyNFTs.selector);
-    _registerFeatureFunction(this.buyAndSwapNFT.selector);
-    _registerFeatureFunction(this.buyAndSwapNFTs.selector);
+    _registerFeatureFunction(this.swapAndBuyNFT.selector);
+    _registerFeatureFunction(this.swapAndBuyNFTs.selector);
     return LibMigrate.MIGRATE_SUCCESS;
   }
   /// @dev Buys an NFT asset by filling the given order.
@@ -141,12 +141,13 @@ contract ShoyuNFTSellOrdersFeature is
     _transferEth(msg.sender, ethBalanceAfter - ethBalanceBefore);
   }
 
-  /// @dev Buys an NFT asset by filling the given order.
+  /// @dev Swaps tokens as instructed in `swapDetails` and
+  ///      fills the sell order.
   /// @param sellOrder The NFT sell order.
   /// @param signature The order signature.
   /// @param swapDetails The swap details required to fill
   ///        the given order.
-  function buyAndSwapNFT(
+  function swapAndBuyNFT(
     LibShoyuNFTOrder.NFTOrder memory sellOrder,
     LibSignature.Signature memory signature,
     uint128 nftBuyAmount,
@@ -154,26 +155,41 @@ contract ShoyuNFTSellOrdersFeature is
   ) public payable override {
     uint256 ethBalanceBefore = address(this).balance.safeSub(msg.value);
 
-    // Transfers token from `msg.sender` and swaps for ETH
-    uint256 ethAvailable;
+    // Transfers tokens from `msg.sender` and swaps for ETH
+    uint256 wethAvailable;
     for (uint256 i = 0; i < swapDetails.length; i++) {
-      _transferFromAndSwapTokensForExactTokens(
-        msg.sender,
-        swapDetails[i].amountOut,
-        swapDetails[i].amountInMax,
-        swapDetails[i].path,
-        address(this)
+      require(
+        swapDetails[i].path[swapDetails[i].path.length - 1] == address(WETH),
+        "swapAndBuyNFT::INVALID_SWAP_DETAILS"
       );
-      ethAvailable = ethAvailable.safeAdd(swapDetails[i].amountOut);
+
+      if (swapDetails[i].path.length == 1) {
+        _transferERC20TokensFrom(
+          WETH,
+          msg.sender,
+          address(this),
+          swapDetails[i].amountOut
+        );
+      } else {
+        _transferFromAndSwapTokensForExactTokens(
+          msg.sender,
+          swapDetails[i].amountOut,
+          swapDetails[i].amountInMax,
+          swapDetails[i].path,
+          address(this)
+        );
+      }
+
+      wethAvailable = wethAvailable.safeAdd(swapDetails[i].amountOut);
     }
-    WETH.withdraw(ethAvailable);
+    WETH.withdraw(wethAvailable);
 
     _buyNFT(
       sellOrder,
       signature,
       BuyParams(
         nftBuyAmount,
-        ethAvailable
+        wethAvailable + msg.value
       )
     );
 
@@ -187,12 +203,13 @@ contract ShoyuNFTSellOrdersFeature is
         )
         .rrevert();
     }
-  
+
     // Refund
     _transferEth(msg.sender, ethBalanceAfter - ethBalanceBefore);
   }
 
-  /// @dev Buys NFT assets by filling the given orders.
+  /// @dev Performs the swaps instructed in `swapDetails` to
+  ///      fill the given sell orders.
   /// @param sellOrders The NFT sell orders.
   /// @param signatures The order signatures.
   /// @param nftBuyAmounts The amount of the NFT asset to buy.
@@ -201,7 +218,7 @@ contract ShoyuNFTSellOrdersFeature is
   ///        function fails to fill any individual order.
   /// @return successes An array of booleans corresponding to whether
   ///         each order in `orders` was successfully filled.
-  function buyAndSwapNFTs(
+  function swapAndBuyNFTs(
     LibShoyuNFTOrder.NFTOrder[] memory sellOrders,
     LibSignature.Signature[] memory signatures,
     uint128[] memory nftBuyAmounts,
@@ -210,19 +227,33 @@ contract ShoyuNFTSellOrdersFeature is
   ) public payable override returns (bool[] memory successes) {
     uint256 ethBalanceBefore = address(this).balance.safeSub(msg.value);
 
-    // Transfers token from `msg.sender` and swaps for ETH
-    uint256 ethAvailable;
+    // Transfers tokens from `msg.sender` and swaps for ETH
+    uint256 wethAvailable;
     for (uint256 i = 0; i < swapDetails.length; i++) {
-      _transferFromAndSwapTokensForExactTokens(
-        msg.sender,
-        swapDetails[i].amountOut,
-        swapDetails[i].amountInMax,
-        swapDetails[i].path,
-        address(this)
+      require(
+        swapDetails[i].path[swapDetails[i].path.length - 1] == address(WETH),
+        "sellAndSwapNFT::TOKEN_MISMATCH"
       );
-      ethAvailable = ethAvailable.safeAdd(swapDetails[i].amountOut);
+
+      if (swapDetails[i].path.length == 1) {
+       _transferERC20TokensFrom(
+          WETH,
+          msg.sender,
+          address(this),
+          swapDetails[i].amountOut
+        );
+      } else {
+        _transferFromAndSwapTokensForExactTokens(
+          msg.sender,
+          swapDetails[i].amountOut,
+          swapDetails[i].amountInMax,
+          swapDetails[i].path,
+          address(this)
+        );
+      }
+      wethAvailable = wethAvailable.safeAdd(swapDetails[i].amountOut);
     }
-    WETH.withdraw(ethAvailable);
+    WETH.withdraw(wethAvailable);
 
     successes = _buyNFTs(
       sellOrders,

@@ -43,7 +43,6 @@ abstract contract ShoyuNFTSellOrders is ShoyuNFTOrders {
         )
         .rrevert();
     }
-
     // Check the signature.
     _validateOrderSignature(orderInfo.orderHash, signature, sellOrder.maker);
   }

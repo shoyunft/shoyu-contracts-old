@@ -31,19 +31,21 @@ interface IShoyuNFTSellOrdersFeature {
     bool revertIfIncomplete
   ) external payable returns (bool[] memory successes);
 
-  /// @dev Buys an NFT asset by filling the given order.
+  /// @dev Swaps tokens as instructed in `swapDetails` and
+  ///      fills the sell order.
   /// @param sellOrder The NFT sell order.
   /// @param signature The order signature.
   /// @param nftBuyAmount The amount of the NFT asset to buy.
   /// @param swapDetails The swap details required to fill the order.
-  function buyAndSwapNFT(
+  function swapAndBuyNFT(
     LibShoyuNFTOrder.NFTOrder calldata sellOrder,
     LibSignature.Signature calldata signature,
     uint128 nftBuyAmount,
     LibShoyuNFTOrder.SwapExactOutDetails[] calldata swapDetails
   ) external payable;
 
-  /// @dev Buys NFT assets by filling the given orders.
+  /// @dev Performs the swaps instructed in `swapDetails` to
+  ///      fill the given sell orders.
   /// @param sellOrders The NFT sell orders.
   /// @param signatures The order signatures.
   /// @param nftBuyAmounts The amount of the NFT assets to buy.
@@ -52,7 +54,7 @@ interface IShoyuNFTSellOrdersFeature {
   ///        function fails to fill any individual order.
   /// @return successes An array of booleans corresponding to whether
   ///         each order in `orders` was successfully filled.
-  function buyAndSwapNFTs(
+  function swapAndBuyNFTs(
     LibShoyuNFTOrder.NFTOrder[] calldata sellOrders,
     LibSignature.Signature[] calldata signatures,
     uint128[] calldata nftBuyAmounts,
