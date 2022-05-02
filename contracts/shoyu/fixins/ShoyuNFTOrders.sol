@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
 import "../../0x/errors/LibNFTOrdersRichErrors.sol";
 import "../../0x/features/libs/LibSignature.sol";
 import "../../0x/fixins/FixinCommon.sol";
-import "../../0x/fixins/FixinEIP712.sol";
 import "../libraries/LibShoyuNFTOrder.sol";
 import "../libraries/LibShoyuNFTOrdersStorage.sol";
+import "../fixins/FixinEIP712.sol";
 
 abstract contract ShoyuNFTOrders is
   FixinCommon,
