@@ -10,12 +10,14 @@ import "../interfaces/IShoyuNFTOrderEvents.sol";
 import "../libraries/LibShoyuNFTOrder.sol";
 import "../libraries/LibShoyuNFTOrdersStorage.sol";
 import "../fixins/ShoyuNFTOrders.sol";
+import "../fixins/ShoyuSpender.sol";
 
 /// @dev Feature for interacting with Shoyu NFT orders.
 contract ShoyuNFTOrdersFeature is
   IFeature,
   IShoyuNFTOrdersFeature,
   IShoyuNFTOrderEvents,
+  ShoyuSpender,
   ShoyuNFTOrders
 {
   using LibSafeMathV06 for uint256;
@@ -27,8 +29,12 @@ contract ShoyuNFTOrdersFeature is
   uint256 public immutable override FEATURE_VERSION = _encodeVersion(1, 0, 0);
 
   constructor(
-    address payable _zeroExAddress
-  ) public ShoyuNFTOrders(_zeroExAddress) {}
+    address payable _zeroExAddress,
+    IEtherTokenV06 _weth
+  ) public
+    ShoyuNFTOrders(_zeroExAddress)
+    ShoyuSpender(_weth)
+  {}
 
   /// @dev Initialize and register this feature.
   ///      Should be delegatecalled by `Migrate.migrate()`.
@@ -40,6 +46,7 @@ contract ShoyuNFTOrdersFeature is
     _registerFeatureFunction(this.getNFTOrderHash.selector);
     _registerFeatureFunction(this.cancelNFTOrder.selector);
     _registerFeatureFunction(this.batchCancelNFTOrders.selector);
+    _registerFeatureFunction(this.batchTransferAndCancel.selector);
     return LibMigrate.MIGRATE_SUCCESS;
   }
 
@@ -71,6 +78,45 @@ contract ShoyuNFTOrdersFeature is
     external
     override
   {
+    for (uint256 i = 0; i < orderNonces.length; i++) {
+      cancelNFTOrder(orderNonces[i]);
+    }
+  }
+
+  /// @dev Transfer multiple NFT assets from `msg.sender` to
+  ///      another user and cancel multiple orders.
+  /// @param nftContracts The NFT contract addresses.
+  /// @param nftStandards The standard for each NFT.
+  /// @param nftTokenIds The NFT token ids.
+  /// @param transferAmounts The amounts of each NFT asset to transfer.
+  /// @param recipient The recipient of the transfers
+  /// @param orderNonces The nonces of the NFT orders to cancel.
+  function batchTransferAndCancel(
+    address[] memory nftContracts,
+    LibShoyuNFTOrder.NFTStandard[] memory nftStandards,
+    uint256[] memory nftTokenIds,
+    uint128[] memory transferAmounts,
+    address recipient,
+    uint256[] memory orderNonces
+  ) external override
+  {
+    require(
+      nftContracts.length == nftTokenIds.length &&
+      nftContracts.length == transferAmounts.length,
+      "batchTransferNFTs/ARRAY_LENGTH_MISMATCH"
+    );
+
+    for (uint256 i = 0; i < nftContracts.length; i++) {
+      _transferNFTAssetFrom(
+        nftStandards[i],
+        nftContracts[i],
+        msg.sender,
+        recipient,
+        nftTokenIds[i],
+        transferAmounts[i]
+      );
+    }
+
     for (uint256 i = 0; i < orderNonces.length; i++) {
       cancelNFTOrder(orderNonces[i]);
     }

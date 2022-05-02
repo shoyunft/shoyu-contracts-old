@@ -45,7 +45,7 @@ const deployFunction: DeployFunction = async function ({
   // deploy ShoyuNFTOrdersFeature
   const shoyuNFTOrdersFeature = await deploy("ShoyuNFTOrdersFeature", {
     from: deployer,
-    args: [zeroExContract.address],
+    args: [zeroExContract.address, wethAddress],
   });
 
   const shoyuNFTOrdersFeatureContract = await ethers.getContractAt(

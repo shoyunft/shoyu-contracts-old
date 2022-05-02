@@ -17,6 +17,7 @@ import {
   validateNFTOrderSignature,
   validateTokenIdMerkleProof,
   onNFTReceived,
+  batchTransferAndCancel,
 } from "./functions";
 
 use(solidity);
@@ -96,4 +97,5 @@ describe("ShoyuNFTOrders", function () {
   describe("validateNFTOrderSignature", validateNFTOrderSignature.bind(this));
   describe("validateTokenIdMerkleProof", validateTokenIdMerkleProof.bind(this));
   describe("onNFTReceived", onNFTReceived.bind(this));
+  describe("batchTransferAndCancel", batchTransferAndCancel.bind(this));
 });

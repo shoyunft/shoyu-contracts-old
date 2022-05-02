@@ -10,10 +10,10 @@ interface IShoyuNFTTransferFeature {
   /// @param transferAmounts The amounts of each NFT asset to transfer.
   /// @param recipient The recipient of the transfers
   function batchTransferNFTs(
-    address[] memory nftContracts,
-    LibShoyuNFTOrder.NFTStandard[] memory nftStandards,
-    uint256[] memory nftTokenIds,
-    uint128[] memory transferAmounts,
+    address[] calldata nftContracts,
+    LibShoyuNFTOrder.NFTStandard[] calldata nftStandards,
+    uint256[] calldata nftTokenIds,
+    uint128[] calldata transferAmounts,
     address recipient
   ) external;
 }

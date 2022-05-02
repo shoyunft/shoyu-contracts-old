@@ -21,6 +21,23 @@ interface IShoyuNFTOrdersFeature {
   function batchCancelNFTOrders(uint256[] calldata orderNonces)
       external;
 
+  /// @dev Transfer multiple NFT assets from `msg.sender` to
+  ///      another user and cancel multiple orders.
+  /// @param nftContracts The NFT contract addresses.
+  /// @param nftStandards The standard for each NFT.
+  /// @param nftTokenIds The NFT token ids.
+  /// @param transferAmounts The amounts of each NFT asset to transfer.
+  /// @param recipient The recipient of the transfers
+  /// @param orderNonces The nonces of the NFT orders to cancel.
+  function batchTransferAndCancel(
+    address[] calldata nftContracts,
+    LibShoyuNFTOrder.NFTStandard[] calldata nftStandards,
+    uint256[] calldata nftTokenIds,
+    uint128[] calldata transferAmounts,
+    address recipient,
+    uint256[] calldata orderNonces
+  ) external;
+
   /// @dev Approves an NFT order on-chain. After pre-signing
   ///      the order, the `PRESIGNED` signature type will become
   ///      valid for that order and signer.
