@@ -20,7 +20,7 @@ abstract contract ShoyuSpender is
   using LibSafeMathV06 for uint128;
 
   /// @dev The WETH token contract.
-  IEtherTokenV06 internal immutable WETH;
+  IEtherTokenV06 private immutable WETH;
 
   constructor(IEtherTokenV06 _weth) public {
     WETH = _weth;

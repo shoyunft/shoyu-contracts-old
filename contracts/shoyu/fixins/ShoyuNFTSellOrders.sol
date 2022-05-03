@@ -8,8 +8,9 @@ import "./ShoyuNFTOrders.sol";
 
 abstract contract ShoyuNFTSellOrders is ShoyuNFTOrders {
   constructor(
-    address payable _zeroExAddress
-  ) public ShoyuNFTOrders(_zeroExAddress)
+    address payable _zeroExAddress,
+    IEtherTokenV06 _weth
+  ) public ShoyuNFTOrders(_zeroExAddress, _weth)
   {}
 
   function _validateSellOrder(

@@ -1,6 +1,7 @@
 pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
+
 import "../../0x/features/libs/LibSignature.sol";
 import "../../0x/errors/LibNFTOrdersRichErrors.sol";
 import "../libraries/LibShoyuNFTOrder.sol";
@@ -8,8 +9,9 @@ import "./ShoyuNFTOrders.sol";
 
 abstract contract ShoyuNFTBuyOrders is ShoyuNFTOrders {
   constructor(
-    address payable _zeroExAddress
-  ) public ShoyuNFTOrders(_zeroExAddress)
+    address payable _zeroExAddress,
+    IEtherTokenV06 _weth
+  ) public ShoyuNFTOrders(_zeroExAddress, _weth)
   {}
 
   function _validateBuyOrder(
@@ -26,10 +28,10 @@ abstract contract ShoyuNFTBuyOrders is ShoyuNFTOrders {
       "_validateBuyOrder::WRONG_TRADE_DIRECTION"
     );
 
-    // The ERC20 token cannot be ETH.
+    // The ERC20 token must be WETH.
     require(
-      address(buyOrder.erc20Token) != LibShoyuNFTOrder.NATIVE_TOKEN_ADDRESS,
-      "_validateBuyOrder::NATIVE_TOKEN_NOT_ALLOWED"
+      address(buyOrder.erc20Token) == address(WETH),
+      "_validateBuyOrder::WRAPPED_NATIVE_TOKEN_ONLY"
     );
 
     // Taker must match the order taker, if one is specified.

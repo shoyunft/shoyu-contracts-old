@@ -58,7 +58,7 @@ contract ShoyuNFTBuyOrdersFeature is
     address _factory,
     bytes32 _pairCodeHash
   ) public
-    ShoyuNFTBuyOrders(_zeroExAddress)
+    ShoyuNFTBuyOrders(_zeroExAddress, _weth)
     ShoyuSpender(_weth)
     ShoyuSwapper(_factory, _pairCodeHash)
   {}

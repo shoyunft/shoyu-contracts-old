@@ -32,7 +32,7 @@ contract ShoyuNFTOrdersFeature is
     address payable _zeroExAddress,
     IEtherTokenV06 _weth
   ) public
-    ShoyuNFTOrders(_zeroExAddress)
+    ShoyuNFTOrders(_zeroExAddress, _weth)
     ShoyuSpender(_weth)
   {}
 

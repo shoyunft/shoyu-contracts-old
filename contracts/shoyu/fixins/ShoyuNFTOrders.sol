@@ -1,6 +1,7 @@
 pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
+import "@0x/contracts-erc20/contracts/src/v06/IEtherTokenV06.sol";
 import "@0x/contracts-utils/contracts/src/v06/LibSafeMathV06.sol";
 import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
 import "../../0x/errors/LibNFTOrdersRichErrors.sol";
@@ -17,10 +18,15 @@ abstract contract ShoyuNFTOrders is
   using LibSafeMathV06 for uint256;
   using LibSafeMathV06 for uint128;
 
+  /// @dev The WETH token contract.
+  IEtherTokenV06 internal immutable WETH;
+
   constructor(
-    address payable _zeroExAddress
-  ) public FixinEIP712(_zeroExAddress)
-  {}
+    address payable _zeroExAddress,
+    IEtherTokenV06 _weth
+  ) public FixinEIP712(_zeroExAddress) {
+    WETH = _weth;
+  }
 
   /// @dev Validates that the given signature is valid for the
   ///      given maker and order hash. Reverts if the signature
