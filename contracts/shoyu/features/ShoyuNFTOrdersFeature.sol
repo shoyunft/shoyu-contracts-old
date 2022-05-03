@@ -46,6 +46,7 @@ contract ShoyuNFTOrdersFeature is
     _registerFeatureFunction(this.getNFTOrderHash.selector);
     _registerFeatureFunction(this.cancelNFTOrder.selector);
     _registerFeatureFunction(this.batchCancelNFTOrders.selector);
+    _registerFeatureFunction(this.batchTransferNFTs.selector);
     _registerFeatureFunction(this.batchTransferAndCancel.selector);
     return LibMigrate.MIGRATE_SUCCESS;
   }
@@ -80,6 +81,40 @@ contract ShoyuNFTOrdersFeature is
   {
     for (uint256 i = 0; i < orderNonces.length; i++) {
       cancelNFTOrder(orderNonces[i]);
+    }
+  }
+
+  /// @dev Transfer multiple NFT assets from `msg.sender` to another user.
+  /// @param nftContracts The NFT contract addresses.
+  /// @param nftStandards The standard for each NFT.
+  /// @param nftTokenIds The NFT token ids.
+  /// @param transferAmounts The amounts of each NFT asset to transfer.
+  /// @param recipient The recipient of the transfers
+  function batchTransferNFTs(
+    address[] memory nftContracts,
+    LibShoyuNFTOrder.NFTStandard[] memory nftStandards,
+    uint256[] memory nftTokenIds,
+    uint128[] memory transferAmounts,
+    address recipient
+  )
+    public
+    override
+  {
+    require(
+      nftContracts.length == nftTokenIds.length &&
+      nftContracts.length == transferAmounts.length,
+      "batchTransferNFTs/ARRAY_LENGTH_MISMATCH"
+    );
+
+    for (uint256 i = 0; i < nftContracts.length; i++) {
+      _transferNFTAssetFrom(
+        nftStandards[i],
+        nftContracts[i],
+        msg.sender,
+        recipient,
+        nftTokenIds[i],
+        transferAmounts[i]
+      );
     }
   }
 

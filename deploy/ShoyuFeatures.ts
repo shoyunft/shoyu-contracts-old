@@ -103,23 +103,6 @@ const deployFunction: DeployFunction = async function ({
     deployer
   );
 
-  // deploy ShoyuNFTTransferFeature
-  const shoyuNFTTransferFeature = await deploy("ShoyuNFTTransferFeature", {
-    from: deployer,
-    args: [wethAddress],
-  });
-
-  const shoyuNFTTransferFeatureContract = await ethers.getContractAt(
-    "ShoyuNFTTransferFeature",
-    shoyuNFTTransferFeature.address
-  );
-
-  await migrator.migrate(
-    shoyuNFTTransferFeature.address,
-    shoyuNFTTransferFeatureContract.interface.encodeFunctionData("migrate"),
-    deployer
-  );
-
   console.log("ShoyuFeatures deployed");
 };
 
