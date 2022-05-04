@@ -1,0 +1,2 @@
+export const MAX_TOKENID_MERKLE_ROOT =
+  "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
