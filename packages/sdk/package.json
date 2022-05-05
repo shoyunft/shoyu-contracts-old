@@ -1,6 +1,6 @@
 {
   "name": "shoyunft-sdk",
-  "version": "1.0.0",
+  "version": "1.0.0-0",
   "main": "dist/index.js",
   "license": "MIT",
   "typings": "dist/index.d.ts",
