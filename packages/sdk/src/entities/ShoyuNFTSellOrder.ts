@@ -8,13 +8,15 @@ import {
   PROTOCOL_FEE_RECIPIENT,
   SHOYU_EXCHANGE_ADDRESS,
 } from "../constants";
-import { TradeDirection } from "../enums";
+import { ShoyuError, TradeDirection } from "../enums";
 import { Fee, ShoyuNFTSellOrderProps } from "../interfaces";
 
 export class ShoyuNFTSellOrder extends ShoyuNFTOrder {
+  public ethSellAmount: BigNumber;
+
   public constructor(props: ShoyuNFTSellOrderProps) {
-    // erc20SellAmount = erc20TokenAmount + royaltyAmount
-    const erc20TokenAmount = BigNumber.from(props.erc20SellAmount).sub(
+    // ethSellAmount = erc20TokenAmount + royaltyAmount
+    const erc20TokenAmount = BigNumber.from(props.ethSellAmount).sub(
       BigNumber.from(props.royaltyFee?.amount ?? 0)
     );
 
@@ -22,7 +24,9 @@ export class ShoyuNFTSellOrder extends ShoyuNFTOrder {
       {
         recipient: PROTOCOL_FEE_RECIPIENT[props.chainId],
         amount: BigNumber.from(
-          PROTOCOL_FEE.multiply(props.erc20SellAmount.toString()).quotient
+          PROTOCOL_FEE.multiply(
+            props.ethSellAmount.toString()
+          ).quotient.toString()
         ),
       },
     ];
@@ -44,13 +48,16 @@ export class ShoyuNFTSellOrder extends ShoyuNFTOrder {
       nftStandard: props.nftStandard,
       nftToken: props.nftToken,
       nftTokenId: BigNumber.from(props.nftTokenId),
-      nftTokenAmount: BigNumber.from(props.nftTokenAmount),
+      nftTokenIds: [],
+      nftTokenAmount: BigNumber.from(props.nftTokenAmount || 1),
       chainId: props.chainId,
       verifyingContract:
         props.verifyingContract || SHOYU_EXCHANGE_ADDRESS[props.chainId],
       taker: props.taker || AddressZero,
       fees,
     });
+
+    this.ethSellAmount = BigNumber.from(props.ethSellAmount);
 
     this.validate();
   }
@@ -59,10 +66,10 @@ export class ShoyuNFTSellOrder extends ShoyuNFTOrder {
     super.validate();
 
     if (this.direction !== TradeDirection.SellNFT) {
-      throw new Error("WRONG_TRADE_DIRECTION");
+      throw new Error(ShoyuError.INVALID_TRADE_DIRECTION);
     }
     if (this.erc20Token !== NATIVE_TOKEN_ADDRESS) {
-      throw new Error("NATIVE_TOKEN_ONLY");
+      throw new Error(ShoyuError.NATIVE_TOKEN_ONLY);
     }
   }
 

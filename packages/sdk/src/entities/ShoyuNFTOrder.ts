@@ -3,9 +3,10 @@ import { isAddress } from "@ethersproject/address";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { splitSignature } from "@ethersproject/bytes";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
-import { keccak256 } from "@ethersproject/solidity";
+import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
+import { keccak256 } from "@ethersproject/keccak256";
 import { arrayify } from "@ethersproject/bytes";
-import { HashZero } from "@ethersproject/constants";
+import { HashZero, Zero } from "@ethersproject/constants";
 import MerkleTree from "merkletreejs";
 
 import {
@@ -15,7 +16,13 @@ import {
   PROTOCOL_FEE_RECIPIENT,
   SHOYU_EXCHANGE_ADDRESS,
 } from "../constants";
-import { NFTStandard, TradeDirection, SignatureType, ChainId } from "../enums";
+import {
+  NFTStandard,
+  TradeDirection,
+  SignatureType,
+  ChainId,
+  ShoyuError,
+} from "../enums";
 import {
   EIP712TypedData,
   Fee,
@@ -91,22 +98,22 @@ export abstract class ShoyuNFTOrder {
     this.erc20TokenAmount = props.erc20TokenAmount;
     this.fees = props.fees;
     this.nftToken = props.nftToken;
-    this.nftTokenId = props.nftTokenId;
+    this.nftTokenId = props.nftTokenId || Zero;
     this.nftTokenIds = props.nftTokenIds;
     this.nftTokenAmount = props.nftTokenAmount;
     this.nftStandard = props.nftStandard;
     this.chainId = props.chainId;
     this.verifyingContract = props.verifyingContract;
 
-    if (this.nftTokenIds?.length > 0) {
+    if (this.nftTokenIds.length > 0) {
       const leaves = this.nftTokenIds.map((tokenId) =>
-        keccak256(["uint256"], [tokenId])
+        solidityKeccak256(["uint256"], [tokenId])
       );
       const tree = new MerkleTree(leaves, keccak256, { sort: true });
       this.nftTokenIdsMerkleRoot = tree.getHexRoot();
 
       if (this.nftTokenIdsMerkleRoot === MAX_TOKENID_MERKLE_ROOT) {
-        throw new Error("GENERATED_INVALID_MERKLE_ROOT");
+        throw new Error(ShoyuError.INVALID_MERKLE_ROOT);
       }
     } else {
       this.nftTokenIdsMerkleRoot = props?.nftTokenIdsMerkleRoot ?? HashZero;
@@ -115,37 +122,60 @@ export abstract class ShoyuNFTOrder {
 
   public validate() {
     if (!(this.chainId in ChainId)) {
-      throw new Error("INVALID_CHAINID");
+      throw new Error(ShoyuError.INVALID_CHAINID);
     }
+
     if (
       !isAddress(this.verifyingContract) ||
       (this.chainId !== ChainId.HARDHAT &&
         this.verifyingContract !== SHOYU_EXCHANGE_ADDRESS[this.chainId])
     ) {
-      throw new Error("INVALID_VERIFYING_CONTRACT");
+      throw new Error(ShoyuError.INVALID_VERIFYING_CONTRACT);
     }
+
     if (this.expiry.lte(BigNumber.from(Math.floor(Date.now() / 1000)))) {
-      throw new Error("ORDER_EXPIRED");
+      throw new Error(ShoyuError.ORDER_EXPIRED);
     }
+
     if (
       (this.nftStandard === NFTStandard.ERC721 && !this.nftTokenAmount.eq(1)) ||
       (this.nftStandard === NFTStandard.ERC721 && this.nftTokenAmount.lt(1))
     ) {
-      throw new Error("INVALID_NFT_TOKEN_AMOUNT");
+      throw new Error(ShoyuError.INVALID_NFT_TOKEN_AMOUNT);
     }
+
+    if (this.nftTokenIds.length > 0) {
+      if (this.direction !== TradeDirection.BuyNFT) {
+        throw new Error(ShoyuError.INVALID_TRADE_DIRECTION);
+      }
+      if (!this.nftTokenId.eq(Zero)) {
+        throw new Error(ShoyuError.INVALID_NFT_TOKENID);
+      }
+
+      const leaves = this.nftTokenIds.map((tokenId) =>
+        solidityKeccak256(["uint256"], [tokenId])
+      );
+      const tree = new MerkleTree(leaves, keccak256, { sort: true });
+      const root = tree.getHexRoot();
+      if (
+        root === MAX_TOKENID_MERKLE_ROOT ||
+        root !== this.nftTokenIdsMerkleRoot
+      ) {
+        throw new Error(ShoyuError.INVALID_MERKLE_ROOT);
+      }
+    }
+
     if (
       !this.fees.some(
         ({ amount, recipient }) =>
           amount.eq(
-            BigNumber.from(
-              PROTOCOL_FEE.multiply(
-                this.getTotalERC20Amount(this.nftTokenAmount).toString()
-              ).quotient.toString()
-            )
+            PROTOCOL_FEE.multiply(
+              this.getTotalERC20Amount(this.nftTokenAmount).toString()
+            ).quotient.toString()
           ) && recipient === PROTOCOL_FEE_RECIPIENT[this.chainId]
       )
     ) {
-      throw new Error("MISSING_PROTOCOL_FEE");
+      throw new Error(ShoyuError.INVALID_PROTOCOL_FEE);
     }
     // TODO: royalty check
   }
@@ -163,9 +193,9 @@ export abstract class ShoyuNFTOrder {
 
     this.fees.forEach((fee: Fee) => {
       if (nftTokenAmount === this.nftTokenAmount) {
-        totalAmount.add(fee.amount);
+        totalAmount = totalAmount.add(fee.amount);
       } else {
-        totalAmount.add(
+        totalAmount = totalAmount.add(
           fee.amount.mul(nftTokenAmount).div(this.nftTokenAmount)
         );
       }
@@ -174,12 +204,12 @@ export abstract class ShoyuNFTOrder {
     return totalAmount;
   }
 
-  public getMerkleProof(tokenId: BigNumber) {
+  public getMerkleProof(tokenId: BigNumberish) {
     const leaves = this.nftTokenIds.map((tokenId) =>
-      keccak256(["uint256"], [tokenId.toString()])
+      solidityKeccak256(["uint256"], [tokenId])
     );
     const tree = new MerkleTree(leaves, keccak256, { sort: true });
-    const leaf = keccak256(["uint256"], [tokenId.toString()]);
+    const leaf = solidityKeccak256(["uint256"], [tokenId]);
     return tree.getHexProof(leaf).map((item) => arrayify(item));
   }
 

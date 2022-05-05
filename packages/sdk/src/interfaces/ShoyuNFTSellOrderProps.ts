@@ -8,12 +8,11 @@ export interface ShoyuNFTSellOrderProps {
   maker: string;
   expiry: BigNumberish;
   nonce: BigNumberish;
-  erc20Token: string;
-  erc20SellAmount: BigNumberish;
+  ethSellAmount: BigNumberish;
   nftStandard: NFTStandard;
   nftToken: string;
   nftTokenId: BigNumberish;
-  nftTokenAmount: BigNumberish;
+  nftTokenAmount?: BigNumberish;
   royaltyFee?: { amount: BigNumberish; recipient: string };
   taker?: string;
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@shoyunft/sdk",
+  "name": "shoyunft-sdk",
   "version": "1.0.0",
   "main": "dist/index.js",
   "license": "MIT",
@@ -7,12 +7,13 @@
   "files": [
     "dist"
   ],
-  "module": "dist/shoyu-sdk.esm.js",
+  "module": "dist/sdk.esm.js",
   "scripts": {
     "lint": "tsdx lint src test",
     "build": "tsdx build",
     "watch": "tsdx watch",
     "test": "tsdx test --passWithNoTests",
+    "test:coverage": "tsdx test --collect-coverage",
     "prepublishOnly": "npx tsdx build"
   },
   "dependencies": {
