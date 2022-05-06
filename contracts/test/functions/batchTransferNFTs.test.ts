@@ -28,7 +28,7 @@ export function batchTransferNFTs() {
       .withArgs(this.alice.address, this.bob.address, "420")
       .to.emit(this.erc1155, "TransferSingle")
       .withArgs(
-        this.zeroEx.address,
+        this.shoyuEx.address,
         this.alice.address,
         this.bob.address,
         "42069",

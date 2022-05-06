@@ -27,7 +27,7 @@ const deployFunction: DeployFunction = async function ({
   }
 
   const sushiswapFactory = await ethers.getContract("UniswapV2Factory");
-  const zeroExContract = await ethers.getContract("ZeroEx");
+  const shoyuExContract = await ethers.getContract("ShoyuEx");
 
   if (chainId === 31337) {
     pairCodeHash = await sushiswapFactory.pairCodeHash();
@@ -39,13 +39,13 @@ const deployFunction: DeployFunction = async function ({
 
   const migrator = await ethers.getContractAt(
     "IOwnableFeature",
-    zeroExContract.address
+    shoyuExContract.address
   );
 
   // deploy ShoyuNFTOrdersFeature
   const shoyuNFTOrdersFeature = await deploy("ShoyuNFTOrdersFeature", {
     from: deployer,
-    args: [zeroExContract.address, wethAddress],
+    args: [shoyuExContract.address, wethAddress],
   });
 
   const shoyuNFTOrdersFeatureContract = await ethers.getContractAt(
@@ -63,7 +63,7 @@ const deployFunction: DeployFunction = async function ({
   const shoyuNFTSellOrdersFeature = await deploy("ShoyuNFTSellOrdersFeature", {
     from: deployer,
     args: [
-      zeroExContract.address,
+      shoyuExContract.address,
       wethAddress,
       sushiswapFactory.address,
       pairCodeHash,
@@ -85,7 +85,7 @@ const deployFunction: DeployFunction = async function ({
   const shoyuNFTBuyOrdersFeature = await deploy("ShoyuNFTBuyOrdersFeature", {
     from: deployer,
     args: [
-      zeroExContract.address,
+      shoyuExContract.address,
       wethAddress,
       sushiswapFactory.address,
       pairCodeHash,
@@ -108,6 +108,6 @@ const deployFunction: DeployFunction = async function ({
 
 export default deployFunction;
 
-deployFunction.dependencies = ["ZeroEx", "Sushiswap"];
+deployFunction.dependencies = ["ShoyuEx", "Sushiswap"];
 
 deployFunction.tags = ["ShoyuFeatures"];

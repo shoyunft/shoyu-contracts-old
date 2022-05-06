@@ -3,12 +3,12 @@
 pragma solidity =0.6.12;
 
 import './libraries/UniswapV2Library.sol';
-import './libraries/SafeMath.sol';
-import './libraries/TransferHelper.sol';
-import './interfaces/IUniswapV2Router02.sol';
-import './interfaces/IUniswapV2Factory.sol';
-import './interfaces/IERC20.sol';
-import './interfaces/IWETH.sol';
+import '@sushiswap/core/contracts/uniswapv2/libraries/SafeMath.sol';
+import '@sushiswap/core/contracts/uniswapv2/libraries/TransferHelper.sol';
+import '@sushiswap/core/contracts/uniswapv2/interfaces/IUniswapV2Router02.sol';
+import '@sushiswap/core/contracts/uniswapv2/interfaces/IUniswapV2Factory.sol';
+import '@sushiswap/core/contracts/uniswapv2/interfaces/IERC20.sol';
+import '@sushiswap/core/contracts/uniswapv2/interfaces/IWETH.sol';
 
 contract UniswapV2Router02 is IUniswapV2Router02 {
     using SafeMathUniswap for uint;

@@ -59,10 +59,10 @@ describe("ShoyuNFTOrders", function () {
     await deployments.fixture(["ShoyuFeatures"]);
     this.sushiswapFactory = await ethers.getContract("UniswapV2Factory");
     this.sushiswapRouter = await ethers.getContract("UniswapV2Router02");
-    this.zeroEx = await ethers.getContract("ZeroEx");
+    this.shoyuEx = await ethers.getContract("ShoyuEx");
     this.weth = await ethers.getContract("WETH9Mock");
 
-    this.shoyuEx = await ethers.getContractAt("IShoyuEx", this.zeroEx.address);
+    this.shoyuEx = await ethers.getContractAt("IShoyuEx", this.shoyuEx.address);
   });
 
   beforeEach(async function () {

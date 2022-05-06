@@ -101,7 +101,7 @@ export function swapAndBuyNFTs() {
       )
       .to.emit(this.erc1155, "TransferSingle")
       .withArgs(
-        this.zeroEx.address,
+        this.shoyuEx.address,
         this.alice.address,
         this.bob.address,
         sellOrderERC1155.nftTokenId,
@@ -260,7 +260,7 @@ export function swapAndBuyNFTs() {
       )
       .to.emit(this.erc1155, "TransferSingle")
       .withArgs(
-        this.zeroEx.address,
+        this.shoyuEx.address,
         this.alice.address,
         this.bob.address,
         sellOrderERC1155.nftTokenId,
@@ -428,7 +428,7 @@ export function swapAndBuyNFTs() {
       )
       .to.emit(this.erc1155, "TransferSingle")
       .withArgs(
-        this.zeroEx.address,
+        this.shoyuEx.address,
         this.alice.address,
         this.bob.address,
         sellOrderERC1155.nftTokenId,

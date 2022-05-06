@@ -81,9 +81,11 @@
   "dependencies": {
     "@0x/contracts-erc20": "^3.3.27",
     "@0x/contracts-utils": "^4.8.8",
+    "@0x/contracts-zero-ex": "^0.32.0",
     "@0x/dev-utils": "^4.2.12",
     "@0x/protocol-utils": "^1.11.1",
     "@openzeppelin/contracts": "^3.1.0",
+    "@sushiswap/core": "^1.4.2",
     "@sushiswap/core-sdk": "^1.0.0-canary.34",
     "merkletreejs": "^0.2.31"
   }

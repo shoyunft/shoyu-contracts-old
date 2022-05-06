@@ -2,8 +2,8 @@
 
 pragma solidity =0.6.12;
 
-import './interfaces/IUniswapV2Factory.sol';
-import './UniswapV2Pair.sol';
+import '@sushiswap/core/contracts/uniswapv2/interfaces/IUniswapV2Factory.sol';
+import '@sushiswap/core/contracts/uniswapv2/UniswapV2Pair.sol';
 
 contract UniswapV2Factory is IUniswapV2Factory {
     address public override feeTo;

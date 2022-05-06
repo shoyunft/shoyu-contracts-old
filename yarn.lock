@@ -37,7 +37,7 @@
   resolved "https://registry.yarnpkg.com/@0x/contract-addresses/-/contract-addresses-6.13.0.tgz#577403b8d797cf3bc5fdc373700df3238bcbdcc7"
   integrity sha512-wxACDOiXRI+W3b8dGzSjVspUHwxtPYLoyA3Cl6h+UBC1dnnaOyOGWX7mHaR8xNV75v2cJdWK3yuWyTES5w1XiQ==
 
-"@0x/contract-wrappers@^13.20.0":
+"@0x/contract-wrappers@^13.20.0", "@0x/contract-wrappers@^13.20.1":
   version "13.20.1"
   resolved "https://registry.yarnpkg.com/@0x/contract-wrappers/-/contract-wrappers-13.20.1.tgz#57f0d57951993a235c475b2651a1cd9ee6bd3a41"
   integrity sha512-vLPhAgqRDuFboKOcSZ1WNm3qAlRhDJNYo5SnhpRI3WiO0EgAkoFzZQQerAQbu5jD6EVfMzLPEYxi+XnEl79WSw==
@@ -70,6 +70,22 @@
     "@0x/utils" "^6.5.3"
     bn.js "^4.11.8"
     ethereum-types "^3.7.0"
+
+"@0x/contracts-zero-ex@^0.32.0":
+  version "0.32.0"
+  resolved "https://registry.yarnpkg.com/@0x/contracts-zero-ex/-/contracts-zero-ex-0.32.0.tgz#4167fec0ab4d8b7adbb034a39117ba9cb09319e8"
+  integrity sha512-4mT48ZP7q8qMJ8b7inlJc6WTQ3OUeuruxf+FXA2rNBGULG3zDhH3CyOrI4X5F3O7xlPZMWhgeKuqDgSfPbIFRQ==
+  dependencies:
+    "@0x/base-contract" "^6.5.0"
+    "@0x/protocol-utils" "^11.12.0"
+    "@0x/subproviders" "^6.6.5"
+    "@0x/types" "^3.3.6"
+    "@0x/typescript-typings" "^5.3.1"
+    "@0x/utils" "^6.5.3"
+    "@0x/web3-wrapper" "^7.6.5"
+    ethereum-types "^3.7.0"
+    ethereumjs-util "^7.0.10"
+    ethers "~4.0.4"
 
 "@0x/dev-utils@^4.2.12":
   version "4.2.14"
@@ -109,6 +125,23 @@
     "@0x/assert" "^3.0.34"
     "@0x/contract-addresses" "^6.12.1"
     "@0x/contract-wrappers" "^13.20.0"
+    "@0x/json-schemas" "^6.4.4"
+    "@0x/subproviders" "^6.6.5"
+    "@0x/utils" "^6.5.3"
+    "@0x/web3-wrapper" "^7.6.5"
+    chai "^4.0.1"
+    ethereumjs-util "^7.0.10"
+    ethers "~4.0.4"
+    lodash "^4.17.11"
+
+"@0x/protocol-utils@^11.12.0":
+  version "11.12.0"
+  resolved "https://registry.yarnpkg.com/@0x/protocol-utils/-/protocol-utils-11.12.0.tgz#bb55f635a122bc7db039f73626cef8beda370450"
+  integrity sha512-8HqXz+82IC/nVpqBuWzuDiDfhxfyz/gchWZd/x6zyVhUEjnR6CHqoB0N3oExncWko/7JVYSmuXD+sC/i5awc/Q==
+  dependencies:
+    "@0x/assert" "^3.0.34"
+    "@0x/contract-addresses" "^6.13.0"
+    "@0x/contract-wrappers" "^13.20.1"
     "@0x/json-schemas" "^6.4.4"
     "@0x/subproviders" "^6.6.5"
     "@0x/utils" "^6.5.3"
@@ -2427,6 +2460,11 @@
     tiny-invariant "^1.1.0"
     tiny-warning "^1.0.0"
     toformat "^2.0.0"
+
+"@sushiswap/core@^1.4.2":
+  version "1.4.2"
+  resolved "https://registry.yarnpkg.com/@sushiswap/core/-/core-1.4.2.tgz#065a6613f842ab7ac6d12878072b59327bffa296"
+  integrity sha512-Khd2i6Bob9uk7dCgVkhUioEoxRP28m6aj25MegAHvnJyxZPVzZDhxSkeL6wdv5MeAp2DwHkYqUq03KDfVTTP4Q==
 
 "@sushiswap/prettier-config@^0.1.0":
   version "0.1.0"
