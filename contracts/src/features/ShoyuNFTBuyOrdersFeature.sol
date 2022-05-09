@@ -386,15 +386,6 @@ contract ShoyuNFTBuyOrdersFeature is
       (LibShoyuNFTOrder.NFTOrder, LibSignature.Signature, bool, bytes32[])
     );
 
-    // `onNFTContract` is called by the NFT token contract.
-    // Check that it matches the NFT token in the order.
-    if (msg.sender != address(buyOrder.nftToken)) {
-      LibShoyuNFTOrdersRichErrors.TokenMismatchError(
-        msg.sender,
-        address(buyOrder.nftToken)
-      ).rrevert();
-    }
-
     _sellNFT(
       buyOrder,
       signature,
