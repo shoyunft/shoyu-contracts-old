@@ -1,3 +1,21 @@
+// SPDX-License-Identifier: Apache-2.0
+/*
+  Copyright 2021 ZeroEx Intl.
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  Files referenced:
+  - https://github.com/0xProject/protocol/blob/c1177416f5A0c2465ee030dacc14ff996eebd4e74/contracts/zero-ex/contracts/src/features/nft_orders/NFTOrders.sol
+  - https://github.com/0xProject/protocol/blob/c1177416f50c2465ee030dacc14ff996eebd4e74/contracts/zero-ex/contracts/src/features/nft_orders/ERC1155OrdersFeature.sol
+*/
+
 pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
@@ -22,12 +40,13 @@ abstract contract ShoyuNFTOrders is
   IEtherTokenV06 internal immutable WETH;
 
   constructor(
-    address payable _zeroExAddress,
+    address payable _shoyuExAddress,
     IEtherTokenV06 _weth
-  ) public FixinEIP712(_zeroExAddress) {
+  ) public FixinEIP712(_shoyuExAddress) {
     WETH = _weth;
   }
 
+  /// From 0x's `_validateOrderSignature()` in `ERC1155OrdersFeature.sol`
   /// @dev Validates that the given signature is valid for the
   ///      given maker and order hash. Reverts if the signature
   ///      is not valid.
@@ -56,6 +75,7 @@ abstract contract ShoyuNFTOrders is
     }
   }
 
+  /// From 0x's `_updateOrderState()` in `ERC1155OrdersFeature.sol`
   /// @dev Updates storage to indicate that the given order
   ///      has been filled by the given amount.
   /// @param orderHash The hash of `order`.
@@ -96,8 +116,7 @@ abstract contract ShoyuNFTOrders is
 
     // If no proof is specified, check the order's merkle root
     // a) merkle root == 0, tokenId must match buy order
-    // b) if merkle root == 0xfff...f, any tokenId can fill order *
-    // TODO: *is there some better way of handling this?
+    // b) if merkle root == 0xfff...f, any tokenId can fill order
     if (tokenIdMerkleProof.length == 0) {
       if (order.nftTokenIdsMerkleRoot == 0) {
         if (tokenId != order.nftTokenId) {
@@ -130,6 +149,7 @@ abstract contract ShoyuNFTOrders is
     return _getEIP712Hash(LibShoyuNFTOrder.getNFTOrderStructHash(order));
   }
 
+  /// From 0x's `getERC1155OrderInfo()` in `ERC1155OrdersFeature.sol`
   /// @dev Get the order info for an NFT order.
   /// @param order The NFT order.
   /// @return orderInfo Info about the order.

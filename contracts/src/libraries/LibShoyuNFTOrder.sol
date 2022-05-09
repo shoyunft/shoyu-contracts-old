@@ -1,3 +1,20 @@
+// SPDX-License-Identifier: Apache-2.0
+/*
+  Copyright 2021 ZeroEx Intl.
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  Adapted from:
+  - https://github.com/0xProject/protocol/blob/c1177416f50c2465ee030dacc14ff996eebd4e74/contracts/zero-ex/contracts/src/features/libs/LibNFTOrder.sol
+*/
+
 pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
@@ -45,7 +62,10 @@ library LibShoyuNFTOrder {
     uint256 amountOutMin;
   }
 
-  // TODO: is there a better way to pack this?
+  // Combined 0x's `ERC1155Order` and `NFTOrder` from `LibNFTOrder.sol`
+  // Changes made:
+  // - Removed `nftProperties`
+  // - Added `nftTokenIdsMerkleRoot`
   struct NFTOrder {
     TradeDirection direction;
     address maker;
@@ -113,6 +133,7 @@ library LibShoyuNFTOrder {
 
   uint256 private constant ADDRESS_MASK = (1 << 160) - 1;
 
+  /// Adapted from 0x's `getERC1155OrderStructHash()` in `LibNFTOrder.sol`
   /// @dev Get the struct hash of an NFT order.
   /// @param order The NFT order.
   /// @return structHash The struct hash of the order.
@@ -166,6 +187,7 @@ library LibShoyuNFTOrder {
     return structHash;
   }
 
+  // From 0x's `_feesHash()` in `LibNFTOrder.sol`
   // Hashes the `fees` array as part of computing the
   // EIP-712 hash of an `NFTOrder`.
   function _feesHash(Fee[] memory fees)

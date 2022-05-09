@@ -1,3 +1,21 @@
+// SPDX-License-Identifier: Apache-2.0
+/*
+  Copyright 2021 ZeroEx Intl.
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  Files referenced:
+  - https://github.com/0xProject/protocol/blob/c1177416f50c2465ee030dacc14ff996eebd4e74/contracts/zero-ex/contracts/src/features/nft_orders/ERC1155OrdersFeature.sol
+  - https://github.com/0xProject/protocol/blob/c1177416f50c2465ee030dacc14ff996eebd4e74/contracts/zero-ex/contracts/src/features/nft_orders/NFTOrders.sol
+*/
+
 pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
@@ -45,12 +63,12 @@ contract ShoyuNFTSellOrdersFeature is
   }
 
   constructor(
-    address payable _zeroExAddress,
+    address payable _shoyuExAddress,
     IEtherTokenV06 _weth,
     address _factory,
     bytes32 _pairCodeHash
   ) public
-    ShoyuNFTSellOrders(_zeroExAddress, _weth)
+    ShoyuNFTSellOrders(_shoyuExAddress, _weth)
     ShoyuSpender(_weth)
     ShoyuSwapper(_factory, _pairCodeHash)
   {}
@@ -65,6 +83,10 @@ contract ShoyuNFTSellOrdersFeature is
     _registerFeatureFunction(this.swapAndBuyNFTs.selector);
     return LibMigrate.MIGRATE_SUCCESS;
   }
+
+  /// From 0x's `buyERC1155()` in `ERC1155OrdersFeature.sol`
+  /// Changes made:
+  /// - Removed taker `callbackData`
   /// @dev Buys an NFT asset by filling the given order.
   /// @param sellOrder The NFT sell order.
   /// @param signature The order signature.
@@ -104,6 +126,10 @@ contract ShoyuNFTSellOrdersFeature is
     _transferEth(msg.sender, ethBalanceAfter - ethBalanceBefore);
   }
 
+  /// Adapted from 0x's `batchBuyERC1155s()`
+  /// Changes made:
+  /// - Removed taker `callbackData`
+  /// - Moved core logic to _buyNFTs()
   /// @dev Buys NFT assets by filling the given orders.
   /// @param sellOrders The NFT sell orders.
   /// @param signatures The order signatures.
@@ -276,6 +302,11 @@ contract ShoyuNFTSellOrdersFeature is
     _transferEth(msg.sender, ethBalanceAfter - ethBalanceBefore);
   }
 
+  // Adapted from 0x's `_buyNFT()` in `NFTOrders.sol`
+  // Changes made:
+  // - Removed `takerCallbackData`
+  // - Removed WETH/ERC20 fee & transfer logic as sell orders
+  //   are restricted to ETH
   // Core settlement logic for buying an NFT asset.
   function _buyNFT(
     LibShoyuNFTOrder.NFTOrder memory sellOrder,
@@ -342,6 +373,10 @@ contract ShoyuNFTSellOrdersFeature is
     );
   }
 
+  // Adapted from 0x's `batchBuyERC1155s()`
+  // Changes made:
+  // - Removed taker `callbackData`[]
+  // - Move ethBalanceBefore & ethBalanceAfter to calling function
   // Logic for batch filling sell orders
   function _buyNFTs(
     LibShoyuNFTOrder.NFTOrder[] memory sellOrders,

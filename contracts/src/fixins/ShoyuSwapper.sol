@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: GPL-3.0
+/*
+  Files referenced:
+  - https://github.com/sushiswap/limit-order/blob/b9b2781513696f57289cbbc9adcfc2d7650a473f/contracts/SushiSwapLimitOrderReceiver3.sol
+*/
+
 pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
@@ -25,6 +31,7 @@ abstract contract ShoyuSwapper is FixinTokenSpender
     pairCodeHash = _pairCodeHash;
   }
 
+  // From `_swapExactTokensForTokens()` in `SushiSwapLimitOrderReceiver3.sol`
   // Swaps an exact amount of tokens for another token through the path passed as an argument
   // Returns the amount of the final token
   function _swapExactTokensForTokens(
@@ -44,6 +51,7 @@ abstract contract ShoyuSwapper is FixinTokenSpender
     _swap(amounts, path, to);
   }
 
+  // From `_swapTokensForExactTokens()` in `SushiSwapLimitOrderReceiver3.sol`
   // Swaps an some input tokens for an exact amount of the output token
   // Returns the amount of input token we traded
   function _swapTokensForExactTokens(
@@ -87,6 +95,7 @@ abstract contract ShoyuSwapper is FixinTokenSpender
     _swap(amounts, path, to);
   }
 
+  // From `_swap()` in `SushiSwapLimitOrderReceiver3.sol` 
   // requires the initial amount to have already been sent to the first pair
   function _swap(
     uint256[] memory amounts,

@@ -1,3 +1,21 @@
+// SPDX-License-Identifier: Apache-2.0
+/*
+  Copyright 2021 ZeroEx Intl.
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  Files referenced:
+  - https://github.com/0xProject/protocol/blob/c1177416f50c2465ee030dacc14ff996eebd4e74/contracts/zero-ex/contracts/src/features/nft_orders/ERC1155OrdersFeature.sol
+  - https://github.com/0xProject/protocol/blob/c1177416f50c2465ee030dacc14ff996eebd4e74/contracts/zero-ex/contracts/src/features/nft_orders/NFTOrders.sol
+*/
+
 pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
@@ -43,6 +61,10 @@ contract ShoyuNFTBuyOrdersFeature is
   /// @dev The magic return value indicating the success of a `onERC1155Received`.
   bytes4 private constant ERC1155_RECEIVED_MAGIC_BYTES = this.onERC1155Received.selector;
 
+  /// Adapted from 0x's `SellParams` in `NFTOrders.sol`
+  /// Changes made:
+  /// - Removed `takerCallbackData`
+  /// - Added `tokenIdMerkleProof`
   struct SellParams {
     uint128 sellAmount;
     uint256 tokenId;
@@ -53,12 +75,12 @@ contract ShoyuNFTBuyOrdersFeature is
   }
 
   constructor(
-    address payable _zeroExAddress,
+    address payable _shoyuExAddress,
     IEtherTokenV06 _weth,
     address _factory,
     bytes32 _pairCodeHash
   ) public
-    ShoyuNFTBuyOrders(_zeroExAddress, _weth)
+    ShoyuNFTBuyOrders(_shoyuExAddress, _weth)
     ShoyuSpender(_weth)
     ShoyuSwapper(_factory, _pairCodeHash)
   {}
@@ -170,6 +192,9 @@ contract ShoyuNFTBuyOrdersFeature is
     _swapExactTokensForTokens(erc20FillAmount, swapDetails.amountOutMin, swapDetails.path, msg.sender);
   }
 
+  // Adapted from 0x's `_sellNFT()`
+  // Changes made:
+  //  - Removed `takerCallbackData`
   // Core settlement logic for selling an NFT asset.
   function _sellNFT(
       LibShoyuNFTOrder.NFTOrder memory buyOrder,
@@ -339,6 +364,9 @@ contract ShoyuNFTBuyOrdersFeature is
     return ERC1155_RECEIVED_MAGIC_BYTES;
   }
 
+  /// Adapted from 0x's `onERC1155Received()` in `ERC1155OrdersFeature.sol`
+  /// Changes made:
+  /// - Added `merkleProof` to `data`
   function _onNFTReceived(
     address operator,
     uint256 tokenId,
