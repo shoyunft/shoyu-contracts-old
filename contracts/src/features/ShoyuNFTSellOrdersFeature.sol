@@ -186,7 +186,7 @@ contract ShoyuNFTSellOrdersFeature is
     for (uint256 i = 0; i < swapDetails.length; i++) {
       require(
         swapDetails[i].path[swapDetails[i].path.length - 1] == address(WETH),
-        "swapAndBuyNFT::INVALID_SWAP_DETAILS"
+        "swapAndBuyNFT::TOKEN_MISMATCH"
       );
 
       if (swapDetails[i].path.length == 1) {
@@ -258,11 +258,11 @@ contract ShoyuNFTSellOrdersFeature is
     for (uint256 i = 0; i < swapDetails.length; i++) {
       require(
         swapDetails[i].path[swapDetails[i].path.length - 1] == address(WETH),
-        "sellAndSwapNFT::TOKEN_MISMATCH"
+        "swapAndBuyNFTs:TOKEN_MISMATCH"
       );
 
       if (swapDetails[i].path.length == 1) {
-       _transferERC20TokensFrom(
+        _transferERC20TokensFrom(
           WETH,
           msg.sender,
           address(this),

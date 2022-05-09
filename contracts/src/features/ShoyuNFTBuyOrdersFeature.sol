@@ -32,7 +32,6 @@ import "../interfaces/IShoyuNFTBuyOrdersFeature.sol";
 import "../interfaces/IShoyuNFTOrderEvents.sol";
 import "../libraries/LibShoyuNFTOrder.sol";
 import "../libraries/LibShoyuNFTOrdersStorage.sol";
-import "../libraries/LibShoyuNFTOrdersRichErrors.sol";
 import "../fixins/ShoyuSwapper.sol";
 import "../fixins/ShoyuNFTBuyOrders.sol";
 import "../fixins/ShoyuSpender.sol";
@@ -236,14 +235,6 @@ contract ShoyuNFTBuyOrdersFeature is
     }
 
     if (params.unwrapNativeToken) {
-      // The ERC20 token must be WETH for it to be unwrapped.
-      if (buyOrder.erc20Token != WETH) {
-        LibNFTOrdersRichErrors.ERC20TokenMismatchError(
-            address(buyOrder.erc20Token),
-            address(WETH)
-        ).rrevert();
-      }
-
       // Transfer the WETH from the maker to the Exchange Proxy
       // so we can unwrap it before sending it to the seller.
       // TODO: Probably safe to just use WETH.transferFrom for some

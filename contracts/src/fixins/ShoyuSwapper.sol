@@ -12,7 +12,7 @@ import "@0x/contracts-erc20/contracts/src/v06/IERC20TokenV06.sol";
 import "@0x/contracts-zero-ex/contracts/src/fixins/FixinTokenSpender.sol";
 import "@sushiswap/core/contracts/uniswapv2/interfaces/IUniswapV2Factory.sol";
 import "@sushiswap/core/contracts/uniswapv2/interfaces/IUniswapV2Pair.sol";
-import "../libraries/UniswapV2Library02.sol";
+import "../sushiswap/uniswapv2/libraries/UniswapV2Library02.sol";
 
 abstract contract ShoyuSwapper is FixinTokenSpender
 {

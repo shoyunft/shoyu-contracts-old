@@ -1,8 +1,8 @@
 
 module.exports = {
     skipFiles: [
-      '0x',
-      'sushiswap'
+      'sushiswap',
+      'mocks',
     ],
     mocha: {
       fgrep: '[skip-on-coverage]',

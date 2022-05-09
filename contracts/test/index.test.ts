@@ -18,6 +18,7 @@ import {
   validateTokenIdMerkleProof,
   onNFTReceived,
   batchTransferAndCancel,
+  getNFTOrderInfo,
 } from "./functions";
 
 use(solidity);
@@ -94,6 +95,7 @@ describe("ShoyuNFTOrders", function () {
   describe("batchCancelNFTOrders", batchCancelNFTOrders.bind(this));
   describe("batchTransferNFTs", batchTransferNFTs.bind(this));
   describe("getNFTOrderHash", getNFTOrderHash.bind(this));
+  describe("getNFTOrderInfo", getNFTOrderInfo.bind(this));
   describe("validateNFTOrderSignature", validateNFTOrderSignature.bind(this));
   describe("validateTokenIdMerkleProof", validateTokenIdMerkleProof.bind(this));
   describe("onNFTReceived", onNFTReceived.bind(this));

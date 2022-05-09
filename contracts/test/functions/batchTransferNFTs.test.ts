@@ -61,4 +61,32 @@ export function batchTransferNFTs() {
       "2"
     );
   });
+
+  it("Reverts input array lengths do not match", async function () {
+    await this.erc721.mint(this.alice.address, "420");
+    await this.erc1155.mint(this.alice.address, "42069", 2);
+
+    /* alice transfers multiple nfts to  */
+    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "420");
+    await this.erc1155
+      .connect(this.alice)
+      .setApprovalForAll(this.shoyuEx.address, "true");
+
+    await expect(
+      this.shoyuEx
+        .connect(this.alice)
+        .batchTransferNFTs(
+          [this.erc721.address, this.erc1155.address],
+          [NFTStandard.ERC721, NFTStandard.ERC1155],
+          ["420", "42069"],
+          ["1"],
+          this.bob.address
+        )
+    ).to.be.reverted;
+
+    expect(await this.erc721.balanceOf(this.alice.address)).to.eq("1");
+    expect(await this.erc1155.balanceOf(this.alice.address, "42069")).to.eq(
+      "2"
+    );
+  });
 }

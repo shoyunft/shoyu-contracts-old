@@ -93,9 +93,41 @@ export function validateTokenIdMerkleProof() {
 
     await expect(
       this.shoyuEx.validateTokenIdMerkleProof(
+        {
+          ...order,
+          nftTokenIdsMerkleRoot:
+            order.nftTokenIdsMerkleRoot.substring(0, 5) +
+            "0" +
+            order.nftTokenIdsMerkleRoot.substring(6),
+        },
+        5,
+        order.getMerkleProof(BigNumber.from(5))
+      )
+    ).to.be.reverted;
+  });
+
+  it("Reverts on sell order", async function () {
+    const order = new NFTOrder({
+      chainId: 31337,
+      verifyingContract: this.shoyuEx.address,
+      direction: TradeDirection.SellNFT,
+      erc20Token: this.weth.address,
+      erc20TokenAmount: BigNumber.from(500),
+      nftStandard: NFTStandard.ERC1155,
+      nftToken: this.erc1155.address,
+      nftTokenIds: Array.from({ length: 10 }, (_, i) => BigNumber.from(i)),
+      nftTokenAmount: BigNumber.from(1),
+      maker: this.alice.address,
+      taker: AddressZero,
+      nonce: BigNumber.from(Date.now()),
+      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
+    });
+
+    await expect(
+      this.shoyuEx.validateTokenIdMerkleProof(
         order,
-        "420",
-        order.getMerkleProof(BigNumber.from(420))
+        5,
+        order.getMerkleProof(BigNumber.from(5))
       )
     ).to.be.reverted;
   });

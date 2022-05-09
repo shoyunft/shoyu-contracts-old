@@ -64,7 +64,7 @@ export function buyNFT() {
   it("Buyer can fill partial ERC1155 sell order", async function () {
     await this.erc1155.mint(this.alice.address, "420", "20");
 
-    /* alice creates sell order for nft, listing 20 items for 100ETH each */
+    /* alice creates sell order for nft, listing 20 items for 100ETH total */
     await this.erc1155
       .connect(this.alice)
       .setApprovalForAll(this.shoyuEx.address, "true");
@@ -273,7 +273,7 @@ export function buyNFT() {
   it("Reverts if `nftBuyAmount` exceeds the order's remaing amount", async function () {
     await this.erc1155.mint(this.alice.address, "420", "2");
 
-    /* alice creates sell order for nft */
+    /* alice creates sell order for nft, listing 2 items */
     await this.erc1155
       .connect(this.alice)
       .setApprovalForAll(this.shoyuEx.address, "true");
@@ -282,15 +282,15 @@ export function buyNFT() {
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
-      erc20TokenAmount: BigNumber.from(100),
+      erc20TokenAmount: BigNumber.from(20 * 100),
       nftStandard: NFTStandard.ERC1155,
       nftToken: this.erc1155.address,
       nftTokenId: BigNumber.from(420),
-      nftTokenAmount: BigNumber.from(1),
+      nftTokenAmount: BigNumber.from(2),
       maker: this.alice.address,
       taker: AddressZero,
       nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) - 3600),
+      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
     const sellOrderSignature = await sellOrder.sign(this.alice);
@@ -299,7 +299,7 @@ export function buyNFT() {
       this.shoyuEx.connect(this.bob).buyNFT(
         sellOrder, // LibNFTOrder
         sellOrderSignature, // LibSignature
-        "2", // nftBuyAmount
+        "3", // nftBuyAmount
         { value: sellOrder.erc20TokenAmount }
       )
     ).to.be.reverted;
@@ -463,6 +463,42 @@ export function buyNFT() {
 
     // bob signs order
     const sellOrderSignature = await sellOrder.sign(this.bob);
+
+    await expect(
+      this.shoyuEx.connect(this.bob).buyNFT(
+        sellOrder, // LibNFTOrder
+        sellOrderSignature, // LibSignature
+        "1", // nftBuyAmount
+        { value: sellOrder.erc20TokenAmount }
+      )
+    ).to.be.reverted;
+
+    expect(await this.erc721.balanceOf(this.alice.address)).to.eq("1");
+    expect(await this.erc721.balanceOf(this.bob.address)).to.eq("0");
+  });
+
+  it("Reverts `order.erc20Token` is not NATIVE_TOKEN", async function () {
+    await this.erc721.mint(this.alice.address, "420");
+
+    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "420");
+    const sellOrder = new NFTOrder({
+      chainId: 31337,
+      verifyingContract: this.shoyuEx.address,
+      direction: TradeDirection.SellNFT,
+      erc20Token: this.weth.address,
+      erc20TokenAmount: BigNumber.from(100),
+      nftStandard: NFTStandard.ERC721,
+      nftToken: this.erc721.address,
+      nftTokenId: BigNumber.from(420),
+      nftTokenAmount: BigNumber.from(1),
+      maker: this.alice.address,
+      taker: AddressZero,
+      nonce: BigNumber.from(Date.now()),
+      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
+    });
+
+    // bob signs order
+    const sellOrderSignature = await sellOrder.sign(this.alice);
 
     await expect(
       this.shoyuEx.connect(this.bob).buyNFT(

@@ -748,4 +748,58 @@ export function swapAndBuyNFTs() {
       bobWETHBalanceBefore.sub(totalAmount.div(4))
     );
   });
+
+  it("Reverts if invalid path", async function () {
+    await this.erc1155.mint(this.alice.address, "420", "1");
+    await this.sushi.transfer(this.bob.address, "5000");
+
+    /* alice creates sell order for nft */
+    await this.erc1155
+      .connect(this.alice)
+      .setApprovalForAll(this.shoyuEx.address, true);
+    const sellOrder = new NFTOrder({
+      chainId: 31337,
+      verifyingContract: this.shoyuEx.address,
+      direction: TradeDirection.SellNFT,
+      erc20Token: ETH_TOKEN_ADDRESS,
+      erc20TokenAmount: BigNumber.from(100),
+      nftStandard: NFTStandard.ERC1155,
+      nftToken: this.erc1155.address,
+      nftTokenId: BigNumber.from(420),
+      nftTokenAmount: BigNumber.from(1),
+      maker: this.alice.address,
+      taker: AddressZero,
+      nonce: BigNumber.from(Date.now()),
+      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
+    });
+
+    const sellOrderSignature = await sellOrder.sign(this.alice);
+
+    /* bob fills sell order and swaps WETH to SUSHI to fill order */
+    await this.weth.connect(this.bob).approve(this.shoyuEx.address, "5000");
+
+    await expect(
+      this.shoyuEx.connect(this.bob).swapAndBuyNFTs(
+        [sellOrder], // LibNFTOrder
+        [sellOrderSignature], // LibSignature
+        ["1"], // nftBuyAmount
+        [
+          {
+            inputToken: this.weth.address,
+            amountInMax: MaxUint256,
+            path: [this.weth.address, this.sushi.address],
+            amountOut: sellOrder.erc20TokenAmount,
+          },
+        ], // SwapExactOutDetails
+        false // revertIfIncomplete
+      )
+    ).to.be.reverted;
+
+    expect(
+      await this.erc1155.balanceOf(this.alice.address, sellOrder.nftTokenId)
+    ).to.eq("1");
+    expect(
+      await this.erc1155.balanceOf(this.bob.address, sellOrder.nftTokenId)
+    ).to.eq("0");
+  });
 }
