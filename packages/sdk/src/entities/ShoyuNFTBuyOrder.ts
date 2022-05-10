@@ -1,4 +1,4 @@
-import { BigNumber } from "@ethersproject/bignumber";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 
 import { ShoyuNFTOrder } from "./ShoyuNFTOrder";
@@ -8,58 +8,83 @@ import {
   SHOYU_EXCHANGE_ADDRESS,
   WETH9_ADDRESS,
 } from "../constants";
-import { ShoyuError, TradeDirection } from "../enums";
-import { Fee, ShoyuNFTBuyOrderProps } from "../interfaces";
+import { ChainId, NFTStandard, ShoyuError, TradeDirection } from "../enums";
+import { Fee } from "../interfaces";
+
+export interface NewShoyuNFTBuyOrder {
+  chainId: ChainId;
+  verifyingContract?: string;
+  maker: string;
+  expiry: BigNumberish;
+  nonce: BigNumberish;
+  wethBuyAmount: BigNumberish;
+  nftStandard: NFTStandard;
+  nftToken: string;
+  nftTokenId?: BigNumberish;
+  nftTokenIds?: BigNumberish[];
+  nftTokenAmount?: BigNumberish;
+  royaltyFee?: { amount: BigNumberish; recipient: string };
+  taker?: string;
+}
 
 export class ShoyuNFTBuyOrder extends ShoyuNFTOrder {
   public wethBuyAmount: BigNumber;
 
-  public constructor(props: ShoyuNFTBuyOrderProps) {
+  public constructor({
+    chainId,
+    maker,
+    expiry,
+    nonce,
+    wethBuyAmount,
+    nftStandard,
+    nftToken,
+    nftTokenId = 0,
+    nftTokenIds = [],
+    nftTokenAmount = 1,
+    royaltyFee = null,
+    taker = AddressZero,
+    verifyingContract = SHOYU_EXCHANGE_ADDRESS[chainId],
+  }: NewShoyuNFTBuyOrder) {
     // wethBuyAmount = erc20TokenAmount + royaltyAmount
-    const erc20TokenAmount = BigNumber.from(props.wethBuyAmount).sub(
-      props.royaltyFee?.amount ?? 0
+    const erc20TokenAmount = BigNumber.from(wethBuyAmount).sub(
+      royaltyFee?.amount ?? 0
     );
 
     const fees: Fee[] = [
       {
-        recipient: PROTOCOL_FEE_RECIPIENT[props.chainId],
+        recipient: PROTOCOL_FEE_RECIPIENT[chainId],
         amount: BigNumber.from(
-          PROTOCOL_FEE.multiply(
-            props.wethBuyAmount.toString()
-          ).quotient.toString()
+          PROTOCOL_FEE.multiply(wethBuyAmount.toString()).quotient.toString()
         ),
       },
     ];
 
-    if (props.royaltyFee) {
+    if (royaltyFee) {
       fees.push({
-        recipient: props.royaltyFee.recipient,
-        amount: BigNumber.from(props.royaltyFee.amount),
+        recipient: royaltyFee.recipient,
+        amount: BigNumber.from(royaltyFee.amount),
       });
     }
 
     super({
-      direction: TradeDirection.BuyNFT,
-      maker: props.maker,
-      expiry: BigNumber.from(props.expiry),
-      nonce: BigNumber.from(props.nonce),
-      erc20Token: WETH9_ADDRESS[props.chainId],
-      erc20TokenAmount: erc20TokenAmount,
-      nftStandard: props.nftStandard,
-      nftToken: props.nftToken,
-      nftTokenId: BigNumber.from(props.nftTokenId || 0),
-      nftTokenIds:
-        props.nftTokenIds?.map((nftTokenId) => BigNumber.from(nftTokenId)) ??
-        [],
-      nftTokenAmount: BigNumber.from(props.nftTokenAmount || 1),
-      chainId: props.chainId,
-      verifyingContract:
-        props.verifyingContract || SHOYU_EXCHANGE_ADDRESS[props.chainId],
-      taker: props.taker || AddressZero,
+      chainId,
+      verifyingContract,
+      maker,
+      taker,
       fees,
+      nftStandard,
+      nftToken,
+      erc20TokenAmount,
+      direction: TradeDirection.BuyNFT,
+      expiry: BigNumber.from(expiry),
+      nonce: BigNumber.from(nonce),
+      erc20Token: WETH9_ADDRESS[chainId],
+      nftTokenId: BigNumber.from(nftTokenId),
+      nftTokenIds: nftTokenIds.map((nftTokenId) => BigNumber.from(nftTokenId)),
+      nftTokenAmount: BigNumber.from(nftTokenAmount),
     });
 
-    this.wethBuyAmount = BigNumber.from(props.wethBuyAmount);
+    this.wethBuyAmount = BigNumber.from(wethBuyAmount);
 
     this.validate();
   }

@@ -6,7 +6,8 @@ import { TypedDataSigner } from "@ethersproject/abstract-signer";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 import { keccak256 } from "@ethersproject/keccak256";
 import { arrayify } from "@ethersproject/bytes";
-import { HashZero, Zero } from "@ethersproject/constants";
+import { HashZero, Zero, AddressZero } from "@ethersproject/constants";
+import { verifyTypedData } from "@ethersproject/wallet";
 import MerkleTree from "merkletreejs";
 
 import {
@@ -295,6 +296,20 @@ export abstract class ShoyuNFTOrder {
     const { v, r, s } = splitSignature(rawSignature);
 
     return { v, r, s, signatureType: SignatureType.EIP712 };
+  }
+
+  public verifySignature(signature: OrderSignature) {
+    const { domain, message } = this.getEIP712TypedData();
+    const types = {
+      [ShoyuNFTOrder.STRUCT_NAME]: ShoyuNFTOrder.STRUCT_ABI,
+      ["Fee"]: ShoyuNFTOrder.FEE_ABI,
+    };
+
+    const signer = verifyTypedData(domain, types, message, signature);
+    return (
+      signer !== AddressZero &&
+      signer.toLowerCase() === this.maker.toLowerCase()
+    );
   }
 
   protected _getFeesHash(): string {

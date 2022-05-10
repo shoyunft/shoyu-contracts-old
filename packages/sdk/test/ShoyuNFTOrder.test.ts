@@ -1,5 +1,6 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
+import { Wallet } from "@ethersproject/wallet";
 import { Percent } from "@sushiswap/core-sdk";
 
 import { MAX_TOKENID_MERKLE_ROOT, PROTOCOL_FEE } from "../src/constants";
@@ -257,5 +258,45 @@ describe("ShoyuNFTOrder", () => {
 
       order.validate();
     }).toThrow(ShoyuError.INVALID_MERKLE_ROOT);
+  });
+
+  it("validateSignature() succeeds on valid signature", async () => {
+    const wallet = await Wallet.createRandom();
+
+    const order = new ShoyuNFTBuyOrder({
+      chainId: 1,
+      maker: wallet.address,
+      expiry: Math.floor(Date.now() / 1000) + 5,
+      nonce: Date.now(),
+      wethBuyAmount: 500,
+      nftStandard: NFTStandard.ERC721,
+      nftToken: TEST_ADDRESS.erc721,
+      nftTokenIds: [1, 2, 420],
+      nftTokenAmount: 1,
+    });
+
+    const signature = await order.sign(wallet);
+
+    expect(order.verifySignature(signature)).toBe(true);
+  });
+
+  it("validateSignature() fails on invalid signature", async () => {
+    const wallet = await Wallet.createRandom();
+
+    const order = new ShoyuNFTBuyOrder({
+      chainId: 1,
+      maker: TEST_ADDRESS.alice,
+      expiry: Math.floor(Date.now() / 1000) + 5,
+      nonce: Date.now(),
+      wethBuyAmount: 500,
+      nftStandard: NFTStandard.ERC721,
+      nftToken: TEST_ADDRESS.erc721,
+      nftTokenIds: [1, 2, 420],
+      nftTokenAmount: 1,
+    });
+
+    const signature = await order.sign(wallet);
+
+    expect(order.verifySignature(signature)).toBe(false);
   });
 });

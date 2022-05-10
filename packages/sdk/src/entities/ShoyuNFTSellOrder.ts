@@ -1,4 +1,4 @@
-import { BigNumber } from "@ethersproject/bignumber";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 
 import { ShoyuNFTOrder } from "./ShoyuNFTOrder";
@@ -8,56 +8,81 @@ import {
   PROTOCOL_FEE_RECIPIENT,
   SHOYU_EXCHANGE_ADDRESS,
 } from "../constants";
-import { ShoyuError, TradeDirection } from "../enums";
-import { Fee, ShoyuNFTSellOrderProps } from "../interfaces";
+import { ChainId, NFTStandard, ShoyuError, TradeDirection } from "../enums";
+import { Fee } from "../interfaces";
+
+export interface NewShoyuNFTSellOrder {
+  chainId: ChainId;
+  verifyingContract?: string;
+  maker: string;
+  expiry: BigNumberish;
+  nonce: BigNumberish;
+  ethSellAmount: BigNumberish;
+  nftStandard: NFTStandard;
+  nftToken: string;
+  nftTokenId: BigNumberish;
+  nftTokenAmount?: BigNumberish;
+  royaltyFee?: { amount: BigNumberish; recipient: string };
+  taker?: string;
+}
 
 export class ShoyuNFTSellOrder extends ShoyuNFTOrder {
   public ethSellAmount: BigNumber;
 
-  public constructor(props: ShoyuNFTSellOrderProps) {
+  public constructor({
+    chainId,
+    maker,
+    expiry,
+    nonce,
+    ethSellAmount,
+    nftStandard,
+    nftToken,
+    nftTokenId,
+    verifyingContract = SHOYU_EXCHANGE_ADDRESS[chainId],
+    nftTokenAmount = 1,
+    royaltyFee = null,
+    taker = AddressZero,
+  }: NewShoyuNFTSellOrder) {
     // ethSellAmount = erc20TokenAmount + royaltyAmount
-    const erc20TokenAmount = BigNumber.from(props.ethSellAmount).sub(
-      BigNumber.from(props.royaltyFee?.amount ?? 0)
+    const erc20TokenAmount = BigNumber.from(ethSellAmount).sub(
+      BigNumber.from(royaltyFee?.amount ?? 0)
     );
 
     const fees: Fee[] = [
       {
-        recipient: PROTOCOL_FEE_RECIPIENT[props.chainId],
+        recipient: PROTOCOL_FEE_RECIPIENT[chainId],
         amount: BigNumber.from(
-          PROTOCOL_FEE.multiply(
-            props.ethSellAmount.toString()
-          ).quotient.toString()
+          PROTOCOL_FEE.multiply(ethSellAmount.toString()).quotient.toString()
         ),
       },
     ];
 
-    if (props.royaltyFee) {
+    if (royaltyFee) {
       fees.push({
-        recipient: props.royaltyFee.recipient,
-        amount: BigNumber.from(props.royaltyFee.amount),
+        recipient: royaltyFee.recipient,
+        amount: BigNumber.from(royaltyFee.amount),
       });
     }
 
     super({
-      direction: TradeDirection.SellNFT,
-      maker: props.maker,
-      expiry: BigNumber.from(props.expiry),
-      nonce: BigNumber.from(props.nonce),
-      erc20Token: NATIVE_TOKEN_ADDRESS,
-      erc20TokenAmount: erc20TokenAmount,
-      nftStandard: props.nftStandard,
-      nftToken: props.nftToken,
-      nftTokenId: BigNumber.from(props.nftTokenId),
-      nftTokenIds: [],
-      nftTokenAmount: BigNumber.from(props.nftTokenAmount || 1),
-      chainId: props.chainId,
-      verifyingContract:
-        props.verifyingContract || SHOYU_EXCHANGE_ADDRESS[props.chainId],
-      taker: props.taker || AddressZero,
+      chainId,
+      verifyingContract,
+      maker,
+      taker,
       fees,
+      nftStandard,
+      nftToken,
+      erc20TokenAmount,
+      direction: TradeDirection.SellNFT,
+      expiry: BigNumber.from(expiry),
+      nonce: BigNumber.from(nonce),
+      erc20Token: NATIVE_TOKEN_ADDRESS,
+      nftTokenId: BigNumber.from(nftTokenId),
+      nftTokenIds: [],
+      nftTokenAmount: BigNumber.from(nftTokenAmount),
     });
 
-    this.ethSellAmount = BigNumber.from(props.ethSellAmount);
+    this.ethSellAmount = BigNumber.from(ethSellAmount);
 
     this.validate();
   }
