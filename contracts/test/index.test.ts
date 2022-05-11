@@ -20,6 +20,7 @@ import {
   batchTransferAndCancel,
   getNFTOrderInfo,
 } from "./functions";
+import { simpleFunctionRegistry } from "./simpleFunctionRegistry.test";
 
 use(solidity);
 
@@ -100,4 +101,5 @@ describe("ShoyuNFTOrders", function () {
   describe("validateTokenIdMerkleProof", validateTokenIdMerkleProof.bind(this));
   describe("onNFTReceived", onNFTReceived.bind(this));
   describe("batchTransferAndCancel", batchTransferAndCancel.bind(this));
+  describe("simpleFunctionRegistry", simpleFunctionRegistry.bind(this));
 });
