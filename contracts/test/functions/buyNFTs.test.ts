@@ -1,39 +1,33 @@
-import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
-
-import { NFTOrder, NFTStandard, TradeDirection } from "../../utils/nft_orders";
-import { ETH_TOKEN_ADDRESS } from "../../utils/constants";
-
 import { expect } from "chai";
+import { BigNumber } from "@ethersproject/bignumber";
+
+import { NFTStandard, TradeDirection } from "../../utils/nft_orders";
+import { ETH_TOKEN_ADDRESS } from "../../utils/constants";
+import TestNFTOrder from "../utils/TestBuyOrder";
 
 export function buyNFTs() {
   it("Fill ERC721 and ERC1155 fill orders with native token and 2% fee", async function () {
-    await this.erc721.mint(this.alice.address, "420");
-    await this.erc1155.mint(this.alice.address, "42069", 2);
+    await this.erc721.mint(this.alice.address, "333");
+    await this.erc1155.mint(this.alice.address, "555", 2);
 
     /* alice creates sell orders for nfts */
-    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "420");
+    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "333");
     await this.erc1155
       .connect(this.alice)
       .setApprovalForAll(this.shoyuEx.address, "true");
 
-    const sellPriceERC721 = BigNumber.from("420");
+    const sellPriceERC721 = BigNumber.from("400");
     const sellPriceERC1155 = BigNumber.from("100");
 
-    const sellOrderERC721 = new NFTOrder({
-      chainId: 31337,
+    const sellOrderERC721 = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
       erc20TokenAmount: sellPriceERC721,
       nftStandard: NFTStandard.ERC721,
       nftToken: this.erc721.address,
-      nftTokenId: BigNumber.from(420),
-      nftTokenAmount: BigNumber.from(1),
+      nftTokenId: 333,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
       fees: [
         {
           recipient: this.deployer.address,
@@ -42,20 +36,16 @@ export function buyNFTs() {
       ],
     });
 
-    const sellOrderERC1155 = new NFTOrder({
-      chainId: 31337,
+    const sellOrderERC1155 = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
       erc20TokenAmount: sellPriceERC1155,
       nftStandard: NFTStandard.ERC1155,
       nftToken: this.erc1155.address,
-      nftTokenId: BigNumber.from(42069),
-      nftTokenAmount: BigNumber.from(2),
+      nftTokenId: 555,
+      nftTokenAmount: 2,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
       fees: [
         {
           recipient: this.deployer.address,
@@ -150,32 +140,27 @@ export function buyNFTs() {
   });
 
   it("Fill ERC721 order and partially fill ERC1155 sell order with native token and 2% fee", async function () {
-    await this.erc721.mint(this.alice.address, "420");
-    await this.erc1155.mint(this.alice.address, "42069", 2);
+    await this.erc721.mint(this.alice.address, "333");
+    await this.erc1155.mint(this.alice.address, "555", 2);
 
     /* alice creates sell orders for nfts */
-    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "420");
+    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "333");
     await this.erc1155
       .connect(this.alice)
       .setApprovalForAll(this.shoyuEx.address, "true");
 
-    const sellPriceERC721 = BigNumber.from("420");
+    const sellPriceERC721 = BigNumber.from("400");
     const sellPriceERC1155 = BigNumber.from("100");
 
-    const sellOrderERC721 = new NFTOrder({
-      chainId: 31337,
+    const sellOrderERC721 = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
       erc20TokenAmount: sellPriceERC721,
       nftStandard: NFTStandard.ERC721,
       nftToken: this.erc721.address,
-      nftTokenId: BigNumber.from(420),
-      nftTokenAmount: BigNumber.from(1),
+      nftTokenId: 333,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
       fees: [
         {
           recipient: this.deployer.address,
@@ -184,20 +169,16 @@ export function buyNFTs() {
       ],
     });
 
-    const sellOrderERC1155 = new NFTOrder({
-      chainId: 31337,
+    const sellOrderERC1155 = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
       erc20TokenAmount: sellPriceERC1155,
       nftStandard: NFTStandard.ERC1155,
       nftToken: this.erc1155.address,
-      nftTokenId: BigNumber.from(42069),
-      nftTokenAmount: BigNumber.from(2),
+      nftTokenId: 555,
+      nftTokenAmount: 2,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
       fees: [
         {
           recipient: this.deployer.address,
@@ -295,32 +276,28 @@ export function buyNFTs() {
   });
 
   it("Reverts if incomplete and `revertIfIncomplete` is true", async function () {
-    await this.erc721.mint(this.alice.address, "420");
-    await this.erc1155.mint(this.alice.address, "42069", 2);
+    await this.erc721.mint(this.alice.address, "333");
+    await this.erc1155.mint(this.alice.address, "555", 2);
 
     /* alice creates sell orders for nfts */
-    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "420");
+    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "333");
     await this.erc1155
       .connect(this.alice)
       .setApprovalForAll(this.shoyuEx.address, "true");
 
-    const sellPriceERC721 = BigNumber.from("420");
+    const sellPriceERC721 = BigNumber.from("400");
     const sellPriceERC1155 = BigNumber.from("100");
 
-    const sellOrderERC721 = new NFTOrder({
-      chainId: 31337,
+    const sellOrderERC721 = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
       erc20TokenAmount: sellPriceERC721,
       nftStandard: NFTStandard.ERC721,
       nftToken: this.erc721.address,
-      nftTokenId: BigNumber.from(420),
-      nftTokenAmount: BigNumber.from(1),
+      nftTokenId: 333,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) - 3600),
+      expiry: Math.floor(Date.now() / 1000) - 3600,
       fees: [
         {
           recipient: this.deployer.address,
@@ -329,20 +306,16 @@ export function buyNFTs() {
       ],
     });
 
-    const sellOrderERC1155 = new NFTOrder({
-      chainId: 31337,
+    const sellOrderERC1155 = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
       erc20TokenAmount: sellPriceERC1155,
       nftStandard: NFTStandard.ERC1155,
       nftToken: this.erc1155.address,
-      nftTokenId: BigNumber.from(42069),
-      nftTokenAmount: BigNumber.from(2),
+      nftTokenId: 555,
+      nftTokenAmount: 2,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
       fees: [
         {
           recipient: this.deployer.address,
@@ -390,32 +363,28 @@ export function buyNFTs() {
   });
 
   it("Suceeds if incomplete and `revertIfIncomplete` is false", async function () {
-    await this.erc721.mint(this.alice.address, "420");
-    await this.erc1155.mint(this.alice.address, "42069", 2);
+    await this.erc721.mint(this.alice.address, "333");
+    await this.erc1155.mint(this.alice.address, "555", 2);
 
     /* alice creates sell orders for nfts */
-    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "420");
+    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "333");
     await this.erc1155
       .connect(this.alice)
       .setApprovalForAll(this.shoyuEx.address, "true");
 
-    const sellPriceERC721 = BigNumber.from("420");
+    const sellPriceERC721 = BigNumber.from("400");
     const sellPriceERC1155 = BigNumber.from("100");
 
-    const sellOrderERC721 = new NFTOrder({
-      chainId: 31337,
+    const sellOrderERC721 = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
       erc20TokenAmount: sellPriceERC721,
       nftStandard: NFTStandard.ERC721,
       nftToken: this.erc721.address,
-      nftTokenId: BigNumber.from(420),
-      nftTokenAmount: BigNumber.from(1),
+      nftTokenId: 333,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) - 3600),
+      expiry: Math.floor(Date.now() / 1000) - 3600,
       fees: [
         {
           recipient: this.deployer.address,
@@ -424,20 +393,16 @@ export function buyNFTs() {
       ],
     });
 
-    const sellOrderERC1155 = new NFTOrder({
-      chainId: 31337,
+    const sellOrderERC1155 = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
       erc20TokenAmount: sellPriceERC1155,
       nftStandard: NFTStandard.ERC1155,
       nftToken: this.erc1155.address,
-      nftTokenId: BigNumber.from(42069),
-      nftTokenAmount: BigNumber.from(2),
+      nftTokenId: 555,
+      nftTokenAmount: 2,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
       fees: [
         {
           recipient: this.deployer.address,
@@ -516,48 +481,39 @@ export function buyNFTs() {
   });
 
   it("Reverts if arrays are different lengths", async function () {
-    await this.erc721.mint(this.alice.address, "420");
-    await this.erc1155.mint(this.alice.address, "42069", 2);
+    await this.erc721.mint(this.alice.address, "333");
+    await this.erc1155.mint(this.alice.address, "555", 2);
 
     /* alice creates sell orders for nfts */
-    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "420");
+    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "333");
     await this.erc1155
       .connect(this.alice)
       .setApprovalForAll(this.shoyuEx.address, "true");
 
-    const sellPriceERC721 = BigNumber.from("420");
+    const sellPriceERC721 = BigNumber.from("400");
     const sellPriceERC1155 = BigNumber.from("100");
 
-    const sellOrderERC721 = new NFTOrder({
-      chainId: 31337,
+    const sellOrderERC721 = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
       erc20TokenAmount: sellPriceERC721,
       nftStandard: NFTStandard.ERC721,
       nftToken: this.erc721.address,
-      nftTokenId: BigNumber.from(420),
-      nftTokenAmount: BigNumber.from(1),
+      nftTokenId: 333,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
-    const sellOrderERC1155 = new NFTOrder({
-      chainId: 31337,
+    const sellOrderERC1155 = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
       erc20TokenAmount: sellPriceERC1155,
       nftStandard: NFTStandard.ERC1155,
       nftToken: this.erc1155.address,
-      nftTokenId: BigNumber.from(42069),
-      nftTokenAmount: BigNumber.from(2),
+      nftTokenId: 555,
+      nftTokenAmount: 2,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
     const sellOrderERC721Signature = await sellOrderERC721.sign(this.alice);
@@ -582,48 +538,39 @@ export function buyNFTs() {
   });
 
   it("Excess ETH is refunded", async function () {
-    await this.erc721.mint(this.alice.address, "420");
-    await this.erc1155.mint(this.alice.address, "42069", 2);
+    await this.erc721.mint(this.alice.address, "333");
+    await this.erc1155.mint(this.alice.address, "555", 2);
 
     /* alice creates sell orders for nfts */
-    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "420");
+    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "333");
     await this.erc1155
       .connect(this.alice)
       .setApprovalForAll(this.shoyuEx.address, "true");
 
-    const sellPriceERC721 = BigNumber.from("420");
+    const sellPriceERC721 = BigNumber.from("400");
     const sellPriceERC1155 = BigNumber.from("100");
 
-    const sellOrderERC721 = new NFTOrder({
-      chainId: 31337,
+    const sellOrderERC721 = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
       erc20TokenAmount: sellPriceERC721,
       nftStandard: NFTStandard.ERC721,
       nftToken: this.erc721.address,
-      nftTokenId: BigNumber.from(420),
-      nftTokenAmount: BigNumber.from(1),
+      nftTokenId: 333,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
-    const sellOrderERC1155 = new NFTOrder({
-      chainId: 31337,
+    const sellOrderERC1155 = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.SellNFT,
       erc20Token: ETH_TOKEN_ADDRESS,
       erc20TokenAmount: sellPriceERC1155,
       nftStandard: NFTStandard.ERC1155,
       nftToken: this.erc1155.address,
-      nftTokenId: BigNumber.from(42069),
-      nftTokenAmount: BigNumber.from(2),
+      nftTokenId: 555,
+      nftTokenAmount: 2,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
     const sellOrderERC721Signature = await sellOrderERC721.sign(this.alice);

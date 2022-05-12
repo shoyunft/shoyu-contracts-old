@@ -1,33 +1,29 @@
-import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero, MaxUint256 } from "@ethersproject/constants";
 import { expect } from "chai";
+import { BigNumber } from "@ethersproject/bignumber";
+import { MaxUint256 } from "@ethersproject/constants";
 
-import { NFTOrder, NFTStandard, TradeDirection } from "../../utils/nft_orders";
+import { NFTStandard, TradeDirection } from "../../utils/nft_orders";
+import TestNFTOrder from "../utils/TestBuyOrder";
 
 export function sellAndSwapNFT() {
   it("Seller can sell ERC721 and swap to different ERC20 with 2% fee", async function () {
     await this.weth.connect(this.alice).deposit({ value: "50000" });
-    await this.erc721.mint(this.bob.address, "420");
+    await this.erc721.mint(this.bob.address, "333");
 
     /* alice creates a buy order for bob's ERC7221 with weth & 2% marketplace fee */
     const offerAmount = BigNumber.from("5000");
     await this.weth
       .connect(this.alice)
       .approve(this.shoyuEx.address, MaxUint256);
-    const buyOrder = new NFTOrder({
-      chainId: 31337,
+    const buyOrder = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.BuyNFT,
       erc20Token: this.weth.address,
       erc20TokenAmount: offerAmount,
       nftStandard: NFTStandard.ERC721,
       nftToken: this.erc721.address,
-      nftTokenId: BigNumber.from(420),
-      nftTokenAmount: BigNumber.from(1),
+      nftTokenId: 333,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
       fees: [
         {
           recipient: this.deployer.address,
@@ -88,26 +84,21 @@ export function sellAndSwapNFT() {
 
   it("Seller can sell ERC1155 and swap to different ERC20", async function () {
     await this.weth.connect(this.alice).deposit({ value: "50000" });
-    await this.erc1155.mint(this.bob.address, "420", "1");
+    await this.erc1155.mint(this.bob.address, "333", "1");
 
     /* alice creates a buy order for bob's ERC7221 with weth */
     await this.weth
       .connect(this.alice)
       .approve(this.shoyuEx.address, MaxUint256);
-    const buyOrder = new NFTOrder({
-      chainId: 31337,
+    const buyOrder = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.BuyNFT,
       erc20Token: this.weth.address,
-      erc20TokenAmount: BigNumber.from(5000),
+      erc20TokenAmount: 5000,
       nftStandard: NFTStandard.ERC1155,
       nftToken: this.erc1155.address,
-      nftTokenId: BigNumber.from(420),
-      nftTokenAmount: BigNumber.from(1),
+      nftTokenId: 333,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
     const buyOrderSignature = await buyOrder.sign(this.alice);
@@ -165,27 +156,23 @@ export function sellAndSwapNFT() {
 
   it("Seller can partially fill ERC1155 buy order and swap to different currency", async function () {
     await this.weth.connect(this.alice).deposit({ value: "50000" });
-    await this.erc1155.mint(this.bob.address, "420", "2");
+    await this.erc1155.mint(this.bob.address, "333", "2");
 
     /* alice creates a buy order for 4 editions of ERC1155 */
     const offerAmount = BigNumber.from("5000");
     await this.weth
       .connect(this.alice)
       .approve(this.shoyuEx.address, MaxUint256);
-    const buyOrder = new NFTOrder({
-      chainId: 31337,
+    const buyOrder = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.BuyNFT,
       erc20Token: this.weth.address,
       erc20TokenAmount: offerAmount,
       nftStandard: NFTStandard.ERC1155,
       nftToken: this.erc1155.address,
-      nftTokenId: BigNumber.from(420),
-      nftTokenAmount: BigNumber.from(4),
+      nftTokenId: 333,
+      nftTokenAmount: 4,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
     const buyOrderSignature = await buyOrder.sign(this.alice);
@@ -247,26 +234,21 @@ export function sellAndSwapNFT() {
 
   it("Reverts if invalid swap path", async function () {
     await this.weth.connect(this.alice).deposit({ value: "50000" });
-    await this.erc1155.mint(this.bob.address, "420", "1");
+    await this.erc1155.mint(this.bob.address, "333", "1");
 
     /* alice creates a buy order for bob's ERC7221 with weth */
     await this.weth
       .connect(this.alice)
       .approve(this.shoyuEx.address, MaxUint256);
-    const buyOrder = new NFTOrder({
-      chainId: 31337,
+    const buyOrder = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.BuyNFT,
       erc20Token: this.weth.address,
-      erc20TokenAmount: BigNumber.from(5000),
+      erc20TokenAmount: 5000,
       nftStandard: NFTStandard.ERC1155,
       nftToken: this.erc1155.address,
-      nftTokenId: BigNumber.from(420),
-      nftTokenAmount: BigNumber.from(1),
+      nftTokenId: 333,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
     const buyOrderSignature = await buyOrder.sign(this.alice);
@@ -301,26 +283,21 @@ export function sellAndSwapNFT() {
 
   it("Reverts if amountOutMin is too high", async function () {
     await this.weth.connect(this.alice).deposit({ value: "50000" });
-    await this.erc1155.mint(this.bob.address, "420", "1");
+    await this.erc1155.mint(this.bob.address, "333", "1");
 
     /* alice creates a buy order for bob's ERC7221 with weth */
     await this.weth
       .connect(this.alice)
       .approve(this.shoyuEx.address, MaxUint256);
-    const buyOrder = new NFTOrder({
-      chainId: 31337,
+    const buyOrder = new TestNFTOrder({
       verifyingContract: this.shoyuEx.address,
       direction: TradeDirection.BuyNFT,
       erc20Token: this.weth.address,
-      erc20TokenAmount: BigNumber.from(5000),
+      erc20TokenAmount: 5000,
       nftStandard: NFTStandard.ERC1155,
       nftToken: this.erc1155.address,
-      nftTokenId: BigNumber.from(420),
-      nftTokenAmount: BigNumber.from(1),
+      nftTokenId: 333,
       maker: this.alice.address,
-      taker: AddressZero,
-      nonce: BigNumber.from(Date.now()),
-      expiry: BigNumber.from(Math.floor(Date.now() / 1000) + 3600),
     });
 
     const buyOrderSignature = await buyOrder.sign(this.alice);

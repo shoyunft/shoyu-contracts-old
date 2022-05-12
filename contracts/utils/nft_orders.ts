@@ -41,12 +41,12 @@ export enum NFTStandard {
   ERC1155 = 1,
 }
 
-interface Fee {
+export interface Fee {
   recipient: string;
   amount: BigNumber;
 }
 
-interface OrderSignature {
+export interface OrderSignature {
   v: number;
   r: string;
   s: string;
@@ -68,7 +68,7 @@ const NFT_ORDER_DEFAULT_VALUES = {
   nftTokenIds: [] as BigNumber[],
   nftTokenAmount: Zero,
   nftTokenIdsMerkleRoot: HashZero,
-  chainId: 1,
+  chainId: 1337,
   verifyingContract: getContractAddressesForChainOrThrow(1).exchangeProxy,
 };
 
