@@ -57,21 +57,10 @@ abstract contract ShoyuNFTOrders is
     bytes32 orderHash,
     LibSignature.Signature memory signature,
     address maker
-  ) internal view {
-    if (signature.signatureType == LibSignature.SignatureType.PRESIGNED) {
-      // Check if order hash has been pre-signed by the maker.
-      bool isPreSigned = LibShoyuNFTOrdersStorage
-        .getStorage()
-        .orderState[orderHash]
-        .preSigned;
-      if (!isPreSigned) {
-        LibNFTOrdersRichErrors.InvalidSignerError(maker, address(0)).rrevert();
-      }
-    } else {
-      address signer = LibSignature.getSignerOfHash(orderHash, signature);
-      if (signer != maker) {
-        LibNFTOrdersRichErrors.InvalidSignerError(maker, signer).rrevert();
-      }
+  ) internal pure {
+    address signer = LibSignature.getSignerOfHash(orderHash, signature);
+    if (signer != maker) {
+      LibNFTOrdersRichErrors.InvalidSignerError(maker, signer).rrevert();
     }
   }
 

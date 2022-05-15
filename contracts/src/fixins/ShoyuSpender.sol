@@ -84,10 +84,6 @@ abstract contract ShoyuSpender is
     );
     // Update amount of ETH spent.
     ethSpent = ethSpent.safeAdd(ethFees);
-    // TODO: why won't this compile??
-    // if (ethSpent > ethAvailable) {
-    //   LibNFTOrdersRichErrors.OverspentEthError(ethSpent, ethAvailable).rrevert();
-    // }
     require(
       ethSpent <= ethAvailable,
       "_payEthFees/OVERSPENT_ETH"
