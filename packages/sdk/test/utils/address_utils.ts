@@ -1,8 +1,8 @@
-import { hexUtils } from "@0x/utils";
+import { Wallet } from "@ethersproject/wallet";
 
 /**
  * Generates a random address.
  */
 export function randomAddress(): string {
-  return hexUtils.random(20);
+  return Wallet.createRandom().address;
 }
