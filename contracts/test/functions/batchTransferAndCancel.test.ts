@@ -49,16 +49,24 @@ export function batchTransferAndCancel() {
       .setApprovalForAll(this.shoyuEx.address, "true");
 
     await expect(
-      this.shoyuEx
-        .connect(this.alice)
-        .batchTransferAndCancel(
-          [this.erc721.address, this.erc1155.address],
-          [NFTStandard.ERC721, NFTStandard.ERC1155],
-          ["3333", "55555"],
-          ["1", "2"],
-          this.bob.address,
-          [sellOrderERC721.nonce, sellOrderERC1155.nonce]
-        )
+      this.shoyuEx.connect(this.alice).batchTransferAndCancel(
+        [
+          {
+            nftContract: this.erc721.address,
+            nftTokenId: 3333,
+            nftTokenAmount: 1,
+            nftStandard: NFTStandard.ERC721,
+          },
+          {
+            nftContract: this.erc1155.address,
+            nftTokenId: 55555,
+            nftTokenAmount: 2,
+            nftStandard: NFTStandard.ERC1155,
+          },
+        ],
+        this.bob.address,
+        [sellOrderERC721.nonce, sellOrderERC1155.nonce]
+      )
     )
       .to.emit(this.erc721, "Transfer")
       .withArgs(this.alice.address, this.bob.address, "3333")
@@ -107,37 +115,18 @@ export function batchTransferAndCancel() {
 
     await expect(
       this.shoyuEx.connect(this.alice).batchTransferAndCancel(
-        [this.erc721.address, this.erc1155.address],
-        [NFTStandard.ERC721, NFTStandard.ERC1155],
-        ["3333", "55555"],
-        ["1", "3"], // transfer extra 1155
-        this.bob.address,
-        [55]
-      )
-    ).to.be.reverted;
-
-    expect(await this.erc721.balanceOf(this.alice.address)).to.eq("1");
-    expect(await this.erc1155.balanceOf(this.alice.address, "55555")).to.eq(
-      "2"
-    );
-  });
-
-  it("Reverts if input array lengths mismatch", async function () {
-    await this.erc721.mint(this.alice.address, "3333");
-    await this.erc1155.mint(this.alice.address, "55555", 2);
-
-    /* alice transfers multiple nfts to  */
-    await this.erc721.connect(this.alice).approve(this.shoyuEx.address, "3333");
-    await this.erc1155
-      .connect(this.alice)
-      .setApprovalForAll(this.shoyuEx.address, "true");
-
-    await expect(
-      this.shoyuEx.connect(this.alice).batchTransferAndCancel(
-        [this.erc721.address, this.erc1155.address],
-        [NFTStandard.ERC721, NFTStandard.ERC1155],
-        ["3333", "55555"],
-        ["1"], // transfer extra 1155
+        {
+          nftContract: this.erc721.address,
+          nftTokenId: 3333,
+          nftTokenAmount: 1,
+          nftStandard: NFTStandard.ERC721,
+        },
+        {
+          nftContract: this.erc1155.address,
+          nftTokenId: 55555,
+          nftTokenAmount: 3, // transfer extra
+          nftStandard: NFTStandard.ERC1155,
+        },
         this.bob.address,
         [55]
       )

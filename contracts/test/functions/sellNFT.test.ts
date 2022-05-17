@@ -358,7 +358,7 @@ export function sellNFT() {
     ).to.eq(1);
   });
 
-  it("Buyer creates an offer for multiple tokenIds and seller can fill the order with valid proof", async function () {
+  it("Buyer creates an offer for specified tokenIds and seller can fill the order with valid proof", async function () {
     await this.weth.connect(this.alice).deposit({ value: "50000" });
     await this.erc721.mint(this.bob.address, "333");
 

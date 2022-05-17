@@ -5,6 +5,13 @@ import "@0x/contracts-zero-ex/contracts/src/features/libs/LibSignature.sol";
 import "../libraries/LibShoyuNFTOrder.sol";
 
 interface IShoyuNFTOrdersFeature {
+  struct TransferParams {
+    address nftContract;
+    uint256 nftTokenId;
+    uint128 nftTokenAmount;
+    LibShoyuNFTOrder.NFTStandard nftStandard;
+  }
+
   /// @dev Cancel a single NFT order by its nonce. The caller
   ///      should be the maker of the order. Silently succeeds if
   ///      an order with the same nonce has already been filled or
@@ -22,32 +29,20 @@ interface IShoyuNFTOrdersFeature {
       external;
 
   /// @dev Transfer multiple NFT assets from `msg.sender` to another user.
-  /// @param nftContracts The NFT contract addresses.
-  /// @param nftStandards The standard for each NFT.
-  /// @param nftTokenIds The NFT token ids.
-  /// @param transferAmounts The amounts of each NFT asset to transfer.
+  /// @param params The NFT transfer parameters.
   /// @param recipient The recipient of the transfers
   function batchTransferNFTs(
-    address[] calldata nftContracts,
-    LibShoyuNFTOrder.NFTStandard[] calldata nftStandards,
-    uint256[] calldata nftTokenIds,
-    uint128[] calldata transferAmounts,
+    TransferParams[] calldata params,
     address recipient
   ) external;
 
   /// @dev Transfer multiple NFT assets from `msg.sender` to
   ///      another user and cancel multiple orders.
-  /// @param nftContracts The NFT contract addresses.
-  /// @param nftStandards The standard for each NFT.
-  /// @param nftTokenIds The NFT token ids.
-  /// @param transferAmounts The amounts of each NFT asset to transfer.
+  /// @param params The NFT transfer parameters.
   /// @param recipient The recipient of the transfers
   /// @param orderNonces The nonces of the NFT orders to cancel.
   function batchTransferAndCancel(
-    address[] calldata nftContracts,
-    LibShoyuNFTOrder.NFTStandard[] calldata nftStandards,
-    uint256[] calldata nftTokenIds,
-    uint128[] calldata transferAmounts,
+    TransferParams[] calldata params,
     address recipient,
     uint256[] calldata orderNonces
   ) external;
