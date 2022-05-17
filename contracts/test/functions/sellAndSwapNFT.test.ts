@@ -212,7 +212,7 @@ export function sellAndSwapNFT() {
           this.shoyuEx.address,
           buyOrder.nonce,
           buyOrder.erc20Token,
-          buyOrder.erc20TokenAmount,
+          buyOrder.erc20TokenAmount.div(4),
           buyOrder.nftToken,
           buyOrder.nftTokenId,
           1

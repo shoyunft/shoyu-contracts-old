@@ -134,18 +134,6 @@ contract ShoyuNFTBuyOrdersFeature is
         nftTokenIdMerkleProof
       )
     );
-
-    emit NFTOrderFilled(
-      buyOrder.direction,
-      buyOrder.maker,
-      msg.sender,
-      buyOrder.nonce,
-      buyOrder.erc20Token,
-      buyOrder.erc20TokenAmount,
-      buyOrder.nftToken,
-      nftTokenId,
-      nftSellAmount
-    );
   }
 
   /// @dev Sells an NFT asset to fill the given order.
@@ -290,7 +278,7 @@ contract ShoyuNFTBuyOrdersFeature is
       params.taker,
       buyOrder.nonce,
       buyOrder.erc20Token,
-      buyOrder.erc20TokenAmount,
+      erc20FillAmount,
       buyOrder.nftToken,
       params.tokenId,
       params.sellAmount
