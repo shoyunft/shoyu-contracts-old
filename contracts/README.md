@@ -4,6 +4,8 @@
 
 ## Contracts
 
+The ShoyuNFT exchange allows users to create buy or sell orders for NFTs in exchange for ETH/ERC20 tokens. Orders are intended to be used with an off-chain orderbook and are filled or canceled on-chain.
+
 ### Order struct
 
 ```
@@ -40,7 +42,8 @@ struct NFTOrder {
 
 ### Sell Orders
 
-- For sell orders, `erc20Token` is restricted to ETH. Order maker and fee recipients will receive ETH.
+- Sell orders are created by the NFT owner and behave like fixed-price listings.
+- `erc20Token` is restricted to ETH. Order maker and fee recipients will receive ETH.
 - However, order takers (buyers) can pay for their NFT(s) with other currencies by filling orders with `swapAndBuyNFT()` or `swapAndBuyNFTs()`.
 
 #### Batch buying / floor sweeping
@@ -51,7 +54,8 @@ struct NFTOrder {
 
 ### Buy Orders
 
-- For buy orders, `erc20Token` is restricted to WETH. Order makers (buyers) will pay with WETH and fee recipients will receive WETH.
+- Buy orders are created by the buyer and behave like offers.
+- `erc20Token` is restricted to WETH. Order makers will pay with WETH and fee recipients will receive WETH.
 - However, order takers (sellers) can receive ETH by filling orders with `sellNFT()` and setting `unwrapNativeToken` to true or another currency by using `sellAndSwapNFT()`.
 
 #### Collection offers
