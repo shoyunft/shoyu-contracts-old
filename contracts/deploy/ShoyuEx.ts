@@ -30,17 +30,19 @@ const deployFunction: DeployFunction = async function ({
     args: [],
   });
 
-  await execute(
-    "InitialMigration",
-    { from: deployer },
-    "initializeZeroEx",
-    deployer,
-    shoyuEx.address,
-    {
-      registry: registry.address,
-      ownable: ownable.address,
-    }
-  );
+  if (shoyuEx.newlyDeployed) {
+    await execute(
+      "InitialMigration",
+      { from: deployer },
+      "initializeZeroEx",
+      deployer,
+      shoyuEx.address,
+      {
+        registry: registry.address,
+        ownable: ownable.address,
+      }
+    );
+  }
 
   console.log("ShoyuEx deployed at ", shoyuEx.address);
 };
