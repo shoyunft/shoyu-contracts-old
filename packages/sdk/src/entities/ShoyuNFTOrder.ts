@@ -171,7 +171,9 @@ export abstract class ShoyuNFTOrder {
         ({ amount, recipient }) =>
           amount.eq(
             PROTOCOL_FEE.multiply(
-              this.getTotalERC20Amount(this.nftTokenAmount).toString()
+              this.getTotalERC20Amount(this.nftTokenAmount)
+                .sub(amount)
+                .toString()
             ).quotient.toString()
           ) && recipient === PROTOCOL_FEE_RECIPIENT[this.chainId]
       )

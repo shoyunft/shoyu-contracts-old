@@ -1,3 +1,5 @@
+import { parseUnits } from "@ethersproject/units";
+
 import { ShoyuNFTSellOrder } from "../src/entities";
 import { ChainId, NFTStandard, ShoyuError, TradeDirection } from "../src/enums";
 import { randomAddress } from "./utils/address_utils";
@@ -10,7 +12,7 @@ describe("ShoyuNFTSellOrder", () => {
       maker: TEST_ADDRESS.alice,
       expiry: Math.floor(Date.now() / 1000) + 3600,
       nonce: Date.now(),
-      ethSellAmount: 500,
+      ethSellAmount: parseUnits("1").toString(),
       nftStandard: NFTStandard.ERC1155,
       nftToken: TEST_ADDRESS.erc1155,
       nftTokenId: 3,
