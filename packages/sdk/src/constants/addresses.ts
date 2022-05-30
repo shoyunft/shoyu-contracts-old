@@ -8,7 +8,7 @@ export const NATIVE_TOKEN_ADDRESS =
 // TODO: get addresses from `deployments` dir of contract pkg
 export const SHOYU_EXCHANGE_ADDRESS: AddressMap = {
   [ChainId.ETHEREUM]: randomAddress(),
-  [ChainId.GÖRLI]: randomAddress(),
+  [ChainId.GÖRLI]: "0xe774B60546011bc0FB72296DDCa229320d55c982",
   [ChainId.HARDHAT]: randomAddress(),
 };
 
