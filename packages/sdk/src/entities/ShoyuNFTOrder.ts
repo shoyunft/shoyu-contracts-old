@@ -37,7 +37,7 @@ import {
 } from "../functions";
 
 export abstract class ShoyuNFTOrder {
-  public static readonly STRUCT_NAME = "ShoyuNFTOrder";
+  public static readonly STRUCT_NAME = "NFTOrder";
   public static readonly STRUCT_ABI = [
     { type: "uint8", name: "direction" },
     { type: "address", name: "maker" },
