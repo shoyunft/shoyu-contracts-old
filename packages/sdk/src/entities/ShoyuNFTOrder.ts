@@ -134,10 +134,6 @@ export abstract class ShoyuNFTOrder {
       throw new Error(ShoyuError.INVALID_VERIFYING_CONTRACT);
     }
 
-    if (this.expiry.lte(BigNumber.from(Math.floor(Date.now() / 1000)))) {
-      throw new Error(ShoyuError.ORDER_EXPIRED);
-    }
-
     if (
       (this.nftStandard === NFTStandard.ERC721 && !this.nftTokenAmount.eq(1)) ||
       (this.nftStandard === NFTStandard.ERC721 && this.nftTokenAmount.lt(1))
@@ -273,7 +269,7 @@ export abstract class ShoyuNFTOrder {
   public willExpire(secondsFromNow = 0): boolean {
     const millisecondsInSecond = 1000;
     const currentUnixTimestampSec = BigNumber.from(
-      Date.now() / millisecondsInSecond
+      Math.floor(Date.now() / millisecondsInSecond)
     );
     return this.expiry.lt(currentUnixTimestampSec.add(secondsFromNow));
   }

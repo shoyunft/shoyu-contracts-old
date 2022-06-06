@@ -97,21 +97,19 @@ describe("ShoyuNFTOrder", () => {
     );
   });
 
-  it("Throws error on expired test", () => {
-    expect(
-      () =>
-        new ShoyuNFTBuyOrder({
-          chainId: ChainId.ETHEREUM,
-          maker: TEST_ADDRESS.alice,
-          expiry: Math.floor(Date.now() / 1000),
-          nonce: Date.now(),
-          wethBuyAmount: 500,
-          nftStandard: NFTStandard.ERC1155,
-          nftToken: TEST_ADDRESS.erc1155,
-          nftTokenId: 42069,
-          nftTokenAmount: 2,
-        })
-    ).toThrow(ShoyuError.ORDER_EXPIRED);
+  it("willExpire returns `true` on expired test", () => {
+    const order = new ShoyuNFTBuyOrder({
+      chainId: ChainId.ETHEREUM,
+      maker: TEST_ADDRESS.alice,
+      expiry: Math.floor(Date.now() / 1000) - 1,
+      nonce: Date.now(),
+      wethBuyAmount: 500,
+      nftStandard: NFTStandard.ERC1155,
+      nftToken: TEST_ADDRESS.erc1155,
+      nftTokenId: 42069,
+      nftTokenAmount: 2,
+    });
+    expect(order.willExpire(0)).toBe(true);
   });
 
   it("Throws error on invalid `verifyingContract`", () => {
